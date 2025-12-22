@@ -7,7 +7,7 @@ TEST_DIR = test
 TARGET = $(BIN_DIR)/project_lucario
 
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I$(INC_DIR)
+CFLAGS = -Wall -Wextra -pthread -g -I$(INC_DIR)
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
