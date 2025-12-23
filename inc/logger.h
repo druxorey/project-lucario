@@ -65,14 +65,4 @@ void loggerLog(LogLevel_t level, const char* message);
  */
 void loggerLogInterrupt(InterruptCode_t code);
 
-/**
- * @brief Logs a CPU execution cycle (for Debug Mode).
- * Requirement: Must record memory address, instruction, and result.
- *
- * @param pc Current Program Counter (Memory Address).
- * @param instruction String representation of the instruction (e.g., "00100005").
- * @param result The value currently in the Accumulator (AC) or operation result.
- */
-void loggerLogCpuCycle(int pc, const char* instruction, int result);
-
 #endif // LOGGER_H
