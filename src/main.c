@@ -1,12 +1,12 @@
-#include "../inc/main.h"
+#include "../inc/definitions.h"
 
 int main(int argc, char *argv[]) {
 	#ifdef DEBUG
 	printf("Debug Mode\n");
 	#endif
 
-	i64 defaultValue = 42;
-	printf("Hello World %ld\n", defaultValue);
+	int a = 5;
+	printf("Value of a: %d\n", a);
 
 	return 0;
 }
