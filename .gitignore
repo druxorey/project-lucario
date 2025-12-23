@@ -13,3 +13,5 @@
 
 bin/*
 obj/*
+docs/report/*
+logs.txt

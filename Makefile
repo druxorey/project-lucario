@@ -7,7 +7,7 @@ TEST_DIR = test
 TARGET = $(BIN_DIR)/project_lucario
 
 CC = gcc
-CFLAGS = -Wall -Wextra -g -I$(INC_DIR)
+CFLAGS = -Wall -Wextra -pthread -g -I$(INC_DIR)
 
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
@@ -56,4 +56,12 @@ run:
 	@echo -e "\e[1;33m[INFO]\e[0m Running..."
 	./$(TARGET)
 
-.PHONY: all debug test clean run
+docs:
+	@if ! command -v doxygen &> /dev/null; then \
+		echo -e "\e[1;31m[ERROR]\e[0m doxygen not found. Please install it first."; \
+		exit 1; \
+	fi
+	@echo -e "\e[1;33m[INFO]\e[0m Running..."
+	doxygen Doxyfile
+
+.PHONY: all debug test clean run docs
