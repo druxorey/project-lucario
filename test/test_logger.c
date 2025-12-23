@@ -9,11 +9,13 @@ UTEST_MAIN();
 
 // Auxiliary function for threading test
 void* thread_log_action(void* arg) {
+	int value = *((int*)arg);
 	for (int i = 0; i < 100; i++) {
 		char message[64];
-		snprintf(message, sizeof(message), "Message from thread %d", i);
+		snprintf(message, sizeof(message), "Message %d from thread %d", i, value);
 		loggerLog(LOG_INFO, message);
 	}
+	free(arg);
 	return NULL;
 }
 
@@ -30,7 +32,7 @@ UTEST(Logger, LogFileCreation) {
 // Verify that log entries are correctly written to the log file
 UTEST(Logger, LogFileUpdate) {
 	loggerInit();
-	loggerLog(LOG_INFO, "Writing test log entry");
+	loggerLog(LOG_ERROR, "Writing test log entry");
 	loggerClose();
 	
 	FILE *f = fopen("logs.txt", "r");
@@ -39,7 +41,7 @@ UTEST(Logger, LogFileUpdate) {
 	char buffer[100];
 	bool found = false;
 	while (fgets(buffer, 100, f)) {
-		if (strstr(buffer, "Writing test log entry")) {
+		if (strstr(buffer, "] [ERROR]: Writing test log entry")) {
 			found = true;
 			break;
 		}
@@ -49,7 +51,7 @@ UTEST(Logger, LogFileUpdate) {
 }
 
 // Verify that interrupt logs are formatted correctly
-UTEST(Logger, SimultaneousWriteToStdoutAndFile) {
+UTEST(Logger, InterruptLogFormat) {
 	// This one is hard to fully automate without redirecting stdout,
 	// but we can check that the function doesn't crash and writes to disk.
 	loggerInit();
@@ -62,7 +64,7 @@ UTEST(Logger, SimultaneousWriteToStdoutAndFile) {
 	char buffer[256];
 	bool found = false;
 	while (fgets(buffer, (int)sizeof(buffer), f)) {
-		if (strstr(buffer, "Arithmetic overflow interrupt") != NULL) {
+		if (strstr(buffer, "] [WARN]: Arithmetic overflow interrupt") != NULL) {
 			found = true;
 			break;
 		}
@@ -76,8 +78,12 @@ UTEST(Logger, ThreadSafety) {
 	loggerInit();
 
 	pthread_t t1, t2;
-	pthread_create(&t1, NULL, thread_log_action, NULL);
-	pthread_create(&t2, NULL, thread_log_action, NULL);
+	int *arg1 = malloc(sizeof(int));
+	int *arg2 = malloc(sizeof(int));
+	*arg1 = 1;
+	*arg2 = 2;
+	pthread_create(&t1, NULL, thread_log_action, arg1);
+	pthread_create(&t2, NULL, thread_log_action, arg2);
 
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);
