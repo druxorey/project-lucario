@@ -4,40 +4,24 @@
 #include "../inc/definitions.h"
 
 /**
- * @brief Obtains program's start line, quantity of words and name from input file.
- * 
- * @param filePath The path to the program's input file
+ * @brief Loader Status Codes.
+ * Used to indicate the result of the loading process.
  */
-void parseInputFile(char* filePath);
+typedef enum {
+    LOAD_SUCCESS = 0,     /**< Program loaded successfully */
+    LOAD_FILE_ERROR = 1,  /**< Error opening the file */
+    LOAD_MEMORY_ERROR = 2 /**< Error writing to memory */
+} LoadStatus_t;
 
 /**
- * @brief Obtains program's start line from input file.
- * 
- * @param filePath The path to the program's input file
+ * @brief Program information obtained from input file.
  */
-int* parseStart(char* filePath);
-
-/**
- * @brief Obtains program's quantity of words from input file.
- * 
- * @param filePath The path to the program's input file
- */
-int* parseWordCount(char* filePath);
-
-/**
- * @brief Obtains program's name from input file.
- * 
- * @param filePath The path to the program's input file
- */
-char* parseProgramName(char* filePath);
-
-/**
- * @brief Obtains file pointer positioned at the start of a specific line.
- * 
- * @param file The file pointer to position
- * @param lineNumber The line number to position at (1-based)
- */
-void positionInLine(FILE* file, int lineNumber);
+typedef struct {
+    int _start;             /**< Program start line */
+    int wordCount;          /**< Number of words in the program */
+    char programName[256];  /**< Name of the program */
+    LoadStatus_t status;    /**< Loading status code */
+} ProgramInfo_t;
 
 /**
  * @brief Obtains program's word at a specific position in the input file.
@@ -45,5 +29,12 @@ void positionInLine(FILE* file, int lineNumber);
  * @param file The file pointer to read from
  */
 word readProgramWord(FILE* file);
+
+/**
+ * @brief Obtains program's start line, quantity of words and name from input file.
+ * 
+ * @param filePath The path to the program's input file
+ */
+ProgramInfo_t loadProgram(char* filePath);
 
 #endif // LOADER_H

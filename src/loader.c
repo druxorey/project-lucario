@@ -4,64 +4,58 @@
 
 #include "../inc/loader.h"
 
+CPU_t CPU;
+word RAM[RAM_SIZE];
 static pthread_mutex_t program_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int* parseStart(char* filePath) {
-    FILE* programFile = fopen(filePath, "r");
-    int* _start = (int*) malloc(sizeof(int));
-    *_start = -1;
-
-    if (programFile) {
-        fscanf(programFile, "%*s %d", _start);
-        fclose(programFile);
+//Mock function for writing in memory
+int writeMemory(address addr, word value) {
+    if (addr >= OS_RESERVED_SIZE && addr < RAM_SIZE) {
+        RAM[addr] = value;
+        return 0;
     }
-
-    return _start;
-}
-
-int* parseWordCount(char* filePath) {
-    FILE* programFile = fopen(filePath, "r");
-    int* wordCount = (int*) malloc(sizeof(int));
-    *wordCount = -1;
-    
-    if (programFile) {
-        fscanf(programFile, "%*s %*d");
-        fscanf(programFile, "%*s %d", wordCount);
-        fclose(programFile);
-    }
-
-    return wordCount;
-}
-
-char* parseProgramName(char* filePath) {
-    FILE* programFile = fopen(filePath, "r");
-    char* programName = (char*) malloc(100 * sizeof(char));
-    programName[0] = '\0';
-    
-    if (programFile) {
-        fscanf(programFile, "%*s %*d");
-        fscanf(programFile, "%*s %*d");
-        fscanf(programFile, "%*s %s", programName);
-        fclose(programFile);
-    }
-    
-    return programName;
-}
-
-// Must secure file pointer using mutex before calling this function to avoid race conditions
-// Line numbers are 1-based
-void positionInLine(FILE* filePtr, int lineNumber) {
-    fseek(filePtr, 0, SEEK_SET);
-    char buffer[256];
-    for (int i = 1; i < lineNumber + 3; i++) {
-        if (fgets(buffer, sizeof(buffer), filePtr) == NULL) {
-            return;
-        }
-    }
+    return 1;
 }
 
 word readProgramWord(FILE* filePtr) {
     word w = 0;
     fscanf(filePtr, "%d", &w);
     return w;
+}
+
+ProgramInfo_t loadProgram(char* filePath) {
+    ProgramInfo_t programInfo = {0};
+    CPU.PSW.mode = MODE_USER;
+    FILE* programFile = fopen(filePath, "r");
+    
+    if (programFile) {
+        fscanf(programFile, "%*s %d", &programInfo._start);
+        fscanf(programFile, "%*s %d", &programInfo.wordCount);
+        fscanf(programFile, "%*s %s", programInfo.programName);
+
+        CPU.PSW.mode = MODE_KERNEL;
+        
+        for (int i = 0 ; i < programInfo.wordCount; i++) {
+            pthread_mutex_lock(&program_mutex);
+            if (writeMemory(OS_RESERVED_SIZE + i, readProgramWord(programFile)) != 0) {
+                ProgramInfo_t programInfoError = {0};
+                programInfoError.status = LOAD_MEMORY_ERROR;
+                return programInfoError;
+            }
+            pthread_mutex_unlock(&program_mutex);
+        }
+
+        CPU.RB = OS_RESERVED_SIZE;
+        CPU.RL = OS_RESERVED_SIZE + programInfo.wordCount;
+        CPU.PSW.pc = OS_RESERVED_SIZE + programInfo._start - 1;
+
+        programInfo.status = LOAD_SUCCESS;
+
+        fclose(programFile);
+    } else {
+        ProgramInfo_t programInfoError = {0};
+        programInfoError.status = LOAD_FILE_ERROR;
+        return programInfoError;
+    }
+    return programInfo;
 }
