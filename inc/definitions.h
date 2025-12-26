@@ -5,7 +5,7 @@
  * Contains all shared data structures between the CPU, Memory, DMA,
  * and other subsystems, based on the 8-digit decimal architecture.
  *
- * @version 1.0
+ * @version 1.1
  */
 
 #ifndef DEFINITIONS_H
@@ -28,7 +28,7 @@
 #define SECTOR_SIZE 9
 /** @brief Maximum allowed magnitude (7 digits). */
 #define MAX_MAGNITUDE 9999999
-#define MIN_MAGNITUDE 0000000
+#define MIN_MAGNITUDE 0
 
 /** @brief Represents an 8-decimal digit machine word. (SMMMMMMM S=Sign, M=Magnitude). */
 typedef int word;
