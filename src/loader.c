@@ -14,8 +14,6 @@ ProgramInfo_t loadProgram(char* filePath) {
 	snprintf(logBuffer, sizeof(logBuffer), "Loader: Attempting to load program from file '%s'.", filePath);
 	loggerLog(LOG_INFO, logBuffer);
 
-	CPU.PSW.mode = MODE_USER;
-	
 	FILE* programFile = fopen(filePath, "r");
 	
 	if (programFile) {
@@ -39,9 +37,10 @@ ProgramInfo_t loadProgram(char* filePath) {
 				snprintf(logBuffer, sizeof(logBuffer), "Loader Error: Memory write failed at physical address %d. Possible overflow or violation.", OS_RESERVED_SIZE + i);
 				loggerLog(LOG_ERROR, logBuffer);
 
+				fclose(programFile);
+
 				ProgramInfo_t programInfoError = {0};
 				programInfoError.status = LOAD_MEMORY_ERROR;
-				fclose(programFile);
 				return programInfoError;
 			}
 		}
@@ -55,6 +54,7 @@ ProgramInfo_t loadProgram(char* filePath) {
 		snprintf(logBuffer, sizeof(logBuffer), "Loader: Context Set - RB: %d | RL: %d | PC: %d", CPU.RB, CPU.RL, CPU.PSW.pc);
 		loggerLog(LOG_INFO, logBuffer);
 
+		CPU.PSW.mode = MODE_USER;
 		programInfo.status = LOAD_SUCCESS;
 
 		fclose(programFile);
