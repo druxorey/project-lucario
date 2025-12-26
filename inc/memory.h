@@ -1,10 +1,11 @@
 /**
  * @file memory.h
- * @brief Simulation memory RAM and definition words.
+ * @brief Memory Management Unit (MMU) and Physical RAM simulation.
  *
- * Defines the memory structure and constants for the simulation environment.
+ * Handles secure access to the shared memory array, including address translation
+ * (Logical -> Physical), protection (Base/Limit registers), and thread safety.
  *
- * @version 1.0
+ * @version 2.0
  */
 
 #ifndef MEMORY_H
@@ -12,34 +13,39 @@
 
 #include "../inc/definitions.h"
 
-/** 
- * @brief Initializes memory subsystem (mutexes, etc.). 
- * Initializes the mutex for thread-safe memory access.
+/**
+ * @brief Status codes for memory operations.
+ * Replaces generic integers for better type safety and readability.
+ */
+typedef enum {
+    MEM_SUCCESS           = 0, /**< Operation completed successfully. */
+    MEM_ERR_OUT_OF_BOUNDS = 1, /**< Bus Error: Physical address > RAM_SIZE. */
+    MEM_ERR_PROTECTION    = 2, /**< SegFault: User tried to access outside RB/RL. */
+    MEM_ERR_INVALID_DATA  = 3  /**< Data corruption: Value exceeds 8-digit limit. */
+} MemoryStatus_t;
+
+/**
+ * @brief Initializes the memory subsystem.
+ * Creates the mutex for bus arbitration.
  */
 void memoryInit(void);
 
 /**
- *  @brief Checks if address is outside OS-reserved region and within RAM. 
- *  Returns true if address is valid for non-OS use.
+ * @brief Thread-safe memory read with MMU translation.
+ *
+ * @param logicalAddr Address requested by the CPU (Relative to process).
+ * @param outData Pointer where the read value will be stored.
+ * @return MemoryStatus_t result code.
  */
-bool isNotSOMemory(address addr);
+MemoryStatus_t readMemory(address logicalAddr, word* outData);
 
-/** 
- * @brief  Validates user-mode access against RB/RL bounds. 
- * Returns true if access is invalid for user mode.
-*/
-bool accessIsInvalid(address addr);
-
-/** 
- * @brief Thread-safe memory read. 
- * Returns data at address or -1 on error.
+/**
+ * @brief Thread-safe memory write with MMU translation.
+ *
+ * @param logicalAddr Address requested by the CPU.
+ * @param data The 8-digit word to write.
+ * @return MemoryStatus_t result code.
  */
-word read_mem(address addr);
+MemoryStatus_t writeMemory(address logicalAddr, word data);
 
-/** 
- * @brief  Thread-safe memory write. No-op on error. 
- * Writes data to address if valid.
-*/
-void write_mem(address addr, word data);
-
-#endif
+#endif // MEMORY_H
