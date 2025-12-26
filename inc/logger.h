@@ -59,7 +59,7 @@ void loggerLog(LogLevel_t level, const char* message);
 
 /**
  * @brief Logs a System Interrupt event.
- * Requirement: Must print to both the log file and stdout.
+ * Prints to stdout AND writes to log file.
  *
  * @param code The interrupt code (e.g., IC_OVERFLOW for Overflow).
  */

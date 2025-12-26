@@ -12,6 +12,7 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+#include <stdbool.h>
 #include "../inc/definitions.h"
 
 /** @brief Maximum character length for a console input line. */

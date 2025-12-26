@@ -207,5 +207,7 @@ extern Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];
 extern pthread_mutex_t BUS_LOCK;
 /** @brief Condition variable to synchronize DMA start. */
 extern pthread_cond_t DMA_COND;
+/** @brief Flag indicating if the system is in debug mode. */
+extern bool isDebugMode;
 
 #endif // DEFINITIONS_H
