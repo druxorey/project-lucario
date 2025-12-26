@@ -1,6 +1,6 @@
 #include <pthread.h>
 #include <stdio.h>
-#include <string.h> // Required for snprintf
+#include <string.h>
 
 #include "../inc/memory.h"
 #include "../inc/logger.h"
@@ -59,8 +59,9 @@ static int getPhysicalAddress(address logicalAddr, MemoryStatus_t* status) {
 	return physAddr;
 }
 
+
 MemoryStatus_t readMemory(address logicalAddr, word* outData) {
-	char logBuffer[128]; // Buffer for formatted log messages
+	char logBuffer[LOG_BUFFER_SIZE];
 	
 	pthread_mutex_lock(&BUS_LOCK);
 
@@ -81,14 +82,15 @@ MemoryStatus_t readMemory(address logicalAddr, word* outData) {
 	*outData = RAM[physAddr];
 
 	snprintf(logBuffer, sizeof(logBuffer), "Mem READ: Logic[%d] -> Phys[%d] = Val[%d]", logicalAddr, physAddr, *outData);
-	loggerLog(LOG_INFO, logBuffer);
+	loggerLog(LOG_DEBUG, logBuffer);
 
 	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_SUCCESS;
 }
 
+
 MemoryStatus_t writeMemory(address logicalAddr, word data) {
-	char logBuffer[128];
+	char logBuffer[LOG_BUFFER_SIZE];
 	
 	pthread_mutex_lock(&BUS_LOCK);
 
@@ -116,7 +118,7 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 	RAM[physAddr] = data;
 
 	snprintf(logBuffer, sizeof(logBuffer), "Mem WRITE: Logic[%d] -> Phys[%d] = Val[%d]", logicalAddr, physAddr, data);
-	loggerLog(LOG_INFO, logBuffer);
+	loggerLog(LOG_DEBUG, logBuffer);
 
 	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_SUCCESS;
