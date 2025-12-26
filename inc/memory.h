@@ -12,19 +12,34 @@
 
 #include "../inc/definitions.h"
 
-/** Initializes memory subsystem (mutexes, etc.). */
+/** 
+ * @brief Initializes memory subsystem (mutexes, etc.). 
+ * Initializes the mutex for thread-safe memory access.
+ */
 void memoryInit(void);
 
-/** Checks if address is outside OS-reserved region and within RAM. */
-bool is_not_SO_memory(address addr);
+/**
+ *  @brief Checks if address is outside OS-reserved region and within RAM. 
+ *  Returns true if address is valid for non-OS use.
+ */
+bool isNotSOMemory(address addr);
 
-/** Validates user-mode access against RB/RL bounds. */
-bool access_is_invalid(address addr);
+/** 
+ * @brief  Validates user-mode access against RB/RL bounds. 
+ * Returns true if access is invalid for user mode.
+*/
+bool accessIsInvalid(address addr);
 
-/** Thread-safe memory read. Returns -1 on error. */
+/** 
+ * @brief Thread-safe memory read. 
+ * Returns data at address or -1 on error.
+ */
 word read_mem(address addr);
 
-/** Thread-safe memory write. No-op on error. */
+/** 
+ * @brief  Thread-safe memory write. No-op on error. 
+ * Writes data to address if valid.
+*/
 void write_mem(address addr, word data);
 
 #endif
