@@ -29,6 +29,8 @@
 /** @brief Maximum allowed magnitude (7 digits). */
 #define MAX_MAGNITUDE 9999999
 #define MIN_MAGNITUDE 0
+/** @brief Log buffer size for debug output. */
+#define LOG_BUFFER_SIZE 512
 
 /** @brief Represents an 8-decimal digit machine word. (SMMMMMMM S=Sign, M=Magnitude). */
 typedef int word;

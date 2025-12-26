@@ -16,7 +16,7 @@
 #include "../inc/definitions.h"
 
 /** @brief Maximum character length for a console input line. */
-#define CONSOLE_BUFFER_SIZE 256
+#define CONSOLE_BUFFER_SIZE 512
 
 /**
  * @brief Console Status Codes.

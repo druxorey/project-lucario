@@ -1,6 +1,8 @@
 #include "../lib/utest.h"
 #include "../inc/definitions.h"
 
+bool isDebugMode = false;
+
 UTEST_MAIN();
 
 // Verifies global system constants match the PDF requirements
@@ -34,6 +36,19 @@ UTEST(Definitions, SignMagnitudeMacros) {
 	ASSERT_EQ(2345678, GET_MAGNITUDE(positive));
 }
 
+// Verifies Word validation logic.
+UTEST(Definitions, WordValidationIntegrity) {
+    word validPos = 9999999;
+    word validNeg = 19999999;
+    word invalidHuge = 20000000; // Sign digit '2', invalid
+    word invalidNeg = -5; // Negative in standard C int, invalid for this arch
+
+    ASSERT_TRUE(IS_VALID_WORD(validPos));
+    ASSERT_TRUE(IS_VALID_WORD(validNeg));
+    ASSERT_FALSE(IS_VALID_WORD(invalidHuge));
+    ASSERT_FALSE(IS_VALID_WORD(invalidNeg));
+}
+
 // Verifies Struct hierarchy and size consistency.
 UTEST(Definitions, StructureIntegrity) {
 	// 1. Verify Sector_t is just a wrapper for 'word' (no extra overhead)
@@ -44,7 +59,7 @@ UTEST(Definitions, StructureIntegrity) {
 	cpu_test.PSW.mode = MODE_KERNEL;
 	
 	// 3. Ensure we can access PSW fields through CPU
-	ASSERT_EQ(1, cpu_test.PSW.mode);
+	ASSERT_EQ((unsigned)1, cpu_test.PSW.mode);
 }
 
 // Checks critical OpCodes limits to ensure Enum integrity.
