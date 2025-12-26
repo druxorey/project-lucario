@@ -190,6 +190,10 @@ typedef struct {
 #define IS_NEGATIVE(w)            ((w) >= SIGN_BIT)
 /** @brief Gets only the magnitude (the lower 7 digits). */
 #define GET_MAGNITUDE(w)          ((w) % SIGN_BIT)
+/** @brief Maximum valid word value (19999999). */
+#define MAX_WORD_VALUE (SIGN_BIT + MAX_MAGNITUDE)
+/** @brief Validates if a word is within the allowed range. */
+#define IS_VALID_WORD(w)  ((w) >= 0 && (w) <= MAX_WORD_VALUE)
 
 /** @brief Shared Main Memory (RAM). */
 extern word RAM[RAM_SIZE];
