@@ -1,61 +1,72 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "../inc/loader.h"
+#include "../inc/memory.h"
+#include "../inc/logger.h"
 
-CPU_t CPU;
-word RAM[RAM_SIZE];
 static pthread_mutex_t program_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-//Mock function for writing in memory
-int writeMemory(address addr, word value) {
-    if (addr >= OS_RESERVED_SIZE && addr < RAM_SIZE) {
-        RAM[addr] = value;
-        return 0;
-    }
-    return 1;
-}
-
-word readProgramWord(FILE* filePtr) {
-    word w = 0;
-    fscanf(filePtr, "%d", &w);
-    return w;
-}
-
 ProgramInfo_t loadProgram(char* filePath) {
-    ProgramInfo_t programInfo = {0};
-    CPU.PSW.mode = MODE_USER;
-    FILE* programFile = fopen(filePath, "r");
-    
-    if (programFile) {
-        fscanf(programFile, "%*s %d", &programInfo._start);
-        fscanf(programFile, "%*s %d", &programInfo.wordCount);
-        fscanf(programFile, "%*s %s", programInfo.programName);
+	ProgramInfo_t programInfo = {0};
+	char logBuffer[256];
 
-        CPU.PSW.mode = MODE_KERNEL;
-        
-        for (int i = 0 ; i < programInfo.wordCount; i++) {
-            pthread_mutex_lock(&program_mutex);
-            if (writeMemory(OS_RESERVED_SIZE + i, readProgramWord(programFile)) != 0) {
-                ProgramInfo_t programInfoError = {0};
-                programInfoError.status = LOAD_MEMORY_ERROR;
-                return programInfoError;
-            }
-            pthread_mutex_unlock(&program_mutex);
-        }
+	snprintf(logBuffer, sizeof(logBuffer), "Loader: Attempting to load program from file '%s'.", filePath);
+	loggerLog(LOG_INFO, logBuffer);
 
-        CPU.RB = OS_RESERVED_SIZE;
-        CPU.RL = OS_RESERVED_SIZE + programInfo.wordCount;
-        CPU.PSW.pc = OS_RESERVED_SIZE + programInfo._start - 1;
+	CPU.PSW.mode = MODE_USER;
+	
+	FILE* programFile = fopen(filePath, "r");
+	
+	if (programFile) {
+		loggerLog(LOG_INFO, "Loader: File opened successfully. Parsing metadata...");
 
-        programInfo.status = LOAD_SUCCESS;
+		fscanf(programFile, "%*s %d", &programInfo._start);
+		fscanf(programFile, "%*s %d", &programInfo.wordCount);
+		fscanf(programFile, "%*s %s", programInfo.programName);
 
-        fclose(programFile);
-    } else {
-        ProgramInfo_t programInfoError = {0};
-        programInfoError.status = LOAD_FILE_ERROR;
-        return programInfoError;
-    }
-    return programInfo;
+		snprintf(logBuffer, sizeof(logBuffer), "Loader: Metadata parsed - Name: %s, Words: %d, Start Line: %d",
+				 programInfo.programName, programInfo.wordCount, programInfo._start);
+		loggerLog(LOG_INFO, logBuffer);
+
+		CPU.PSW.mode = MODE_KERNEL;
+		loggerLog(LOG_INFO, "Loader: Switched to KERNEL MODE for memory injection.");
+		
+		for (int i = 0 ; i < programInfo.wordCount; i++) {
+			word instruction = readProgramWord(programFile);
+			
+			if (writeMemory(OS_RESERVED_SIZE + i, instruction) != 0) {
+				snprintf(logBuffer, sizeof(logBuffer), "Loader Error: Memory write failed at physical address %d. Possible overflow or violation.", OS_RESERVED_SIZE + i);
+				loggerLog(LOG_ERROR, logBuffer);
+
+				ProgramInfo_t programInfoError = {0};
+				programInfoError.status = LOAD_MEMORY_ERROR;
+				fclose(programFile);
+				return programInfoError;
+			}
+		}
+		
+		loggerLog(LOG_INFO, "Loader: All instructions written to RAM successfully.");
+
+		CPU.RB = OS_RESERVED_SIZE;
+		CPU.RL = OS_RESERVED_SIZE + programInfo.wordCount;
+		CPU.PSW.pc = OS_RESERVED_SIZE + programInfo._start - 1;
+
+		snprintf(logBuffer, sizeof(logBuffer), "Loader: Context Set - RB: %d | RL: %d | PC: %d", CPU.RB, CPU.RL, CPU.PSW.pc);
+		loggerLog(LOG_INFO, logBuffer);
+
+		programInfo.status = LOAD_SUCCESS;
+
+		fclose(programFile);
+		loggerLog(LOG_INFO, "Loader: File closed. Program ready for execution.");
+
+	} else {
+		snprintf(logBuffer, sizeof(logBuffer), "Loader Error: Could not open file '%s'. Check path or permissions.", filePath);
+		loggerLog(LOG_ERROR, logBuffer);
+
+		ProgramInfo_t programInfoError = {0};
+		programInfoError.status = LOAD_FILE_ERROR;
+		return programInfoError;
+	}
+	return programInfo;
 }
