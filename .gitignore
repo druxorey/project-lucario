@@ -15,3 +15,5 @@ bin/*
 obj/*
 docs/report/*
 logs.txt
+test_program.txt
+.vscode
