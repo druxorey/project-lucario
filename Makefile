@@ -12,8 +12,12 @@ CFLAGS = -Wall -Wextra -pthread -g -I$(INC_DIR)
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
 
-MAIN_OBJ = $(OBJ_DIR)/main.o
-TEST_OBJS = $(filter-out $(MAIN_OBJ), $(OBJS))
+DEPS_console = $(OBJ_DIR)/console.o $(OBJ_DIR)/logger.o
+DEPS_cpu = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
+DEPS_definitions =
+DEPS_loader = $(OBJ_DIR)/loader.o $(OBJ_DIR)/logger.o
+DEPS_logger = $(OBJ_DIR)/logger.o
+DEPS_memory = $(OBJ_DIR)/memory.o $(OBJ_DIR)/logger.o
 
 all: $(TARGET)
 	@echo -e "\e[1;32m[SUCCESS]\e[0m Compiled in normal mode"
@@ -36,10 +40,14 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 test: $(OBJS)
 ifndef mod
 	@echo -e "\e[1;31m[ERROR]\e[0m You must specify a module. Usage: make test mod=name"
+	@echo -e "Available modules: definitions, memory, console, loader"
 else
 	@mkdir -p $(BIN_DIR)
+	@if [ -z "$(DEPS_$(mod))" ]; then \
+		echo -e "\e[1;33m[WARNING]\e[0m No specific deps found for '$(mod)', linking only test file..."; \
+	fi
 	@echo -e "\e[1;33m[INFO]\e[0m Compiling tests for: $(mod)"
-	$(CC) $(CFLAGS) $(TEST_DIR)/test_$(mod).c $(TEST_OBJS) -o $(BIN_DIR)/test_$(mod)
+	$(CC) $(CFLAGS) $(TEST_DIR)/test_$(mod).c $(DEPS_$(mod)) -o $(BIN_DIR)/test_$(mod)
 	@echo -e "\e[1;34m[TEST]\e[0m Running tests..."
 	./$(BIN_DIR)/test_$(mod)
 endif
