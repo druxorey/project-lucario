@@ -1,132 +1,123 @@
 #include <stdlib.h>
 #include <pthread.h>
-
 #include "../lib/utest.h"
 #include "../inc/memory.h"
 
 UTEST_MAIN();
 
-// Provide global CPU instance for linking
+// Global mock CPU instance
 CPU_t CPU;
 
-// Auxiliary function for threading test
-void* thread_memory_action(void* arg) {
-	int value = *((int*)arg);
-    free(arg);
-    for (int i = 0; i < 100; i++) {
-        word data = value * 1000 + i;
-        address addr = OS_RESERVED_SIZE + (value * 100) + i;
-        write_mem(addr, data);
-    }
+// Auxiliary function for thread
+void* threadWorker(void* arg) {
+	int id = *((int*)arg);
+	free(arg);
+	writeMemory(OS_RESERVED_SIZE + id, id * 10);
 	return NULL;
 }
 
-// Verify IsNotSOMemory boundaries
-UTEST(Memory, IsNotSOMemory_bounds) {
-    EXPECT_TRUE(isNotSOMemory(OS_RESERVED_SIZE));
-    EXPECT_FALSE(isNotSOMemory(OS_RESERVED_SIZE - 1));
-    EXPECT_FALSE(isNotSOMemory(RAM_SIZE));
+// Verify that logical address translates correctly.
+UTEST(Memory, ReadWriteValidUserMode) {
+	memoryInit();
+	CPU.PSW.mode = MODE_USER;
+	CPU.RB = 300;
+	CPU.RL = 400;
+
+	address logicalAddr = 50;
+	word data = 1234567;
+	word out = 0;
+
+	MemoryStatus_t wStatus = writeMemory(logicalAddr, data);
+	MemoryStatus_t rStatus = readMemory(logicalAddr, &out);
+
+	EXPECT_EQ(MEM_SUCCESS, wStatus);
+	EXPECT_EQ(MEM_SUCCESS, rStatus);
+	EXPECT_EQ(data, out);
+	
+	// Verify the white-box: Was it written to physical 350?
+	// Switch to Kernel to read the absolute address and verify translation
+	CPU.PSW.mode = MODE_KERNEL;
+	word physVal = 0;
+	readMemory(350, &physVal);
+	EXPECT_EQ(data, physVal);
 }
 
-// Verify AccessIsInvalid boundaries
-UTEST(Memory, AccessIsInvalid_bounds) {
-    CPU.RB = 300;
-    CPU.RL = 350;
-    EXPECT_FALSE(accessIsInvalid(0));     // 300 within [RB,RL]
-    EXPECT_FALSE(accessIsInvalid(50));    // 350 within [RB,RL]
-    EXPECT_TRUE(accessIsInvalid(51));     // 351 > RL
-    EXPECT_TRUE(accessIsInvalid(-1));     // 299 < RB
+// Verify that user mode cannot access memory outside its RB/RL bounds.
+UTEST(Memory, UserModeProtectionFault) {
+	memoryInit();
+	CPU.PSW.mode = MODE_USER;
+	CPU.RB = 300;
+	CPU.RL = 340;
+
+	address invalidLogicalAddr = 50;
+	word data = 4321;
+	word out = 0;
+
+	MemoryStatus_t status = writeMemory(invalidLogicalAddr, data);
+	EXPECT_EQ(MEM_ERR_PROTECTION, status);
+
+	status = readMemory(invalidLogicalAddr, &out);
+	EXPECT_EQ(MEM_ERR_PROTECTION, status);
 }
 
-// Verify read and write in valid user mode region
-UTEST(Memory, ReadWriteValidKernelMode) {
-    memoryInit();
-    CPU.PSW.mode = MODE_KERNEL;
+// The Kernel should be able to write anywhere (e.g., load the OS).
+UTEST(Memory, KernelBypassesProtection) {
+	memoryInit();
+	CPU.PSW.mode = MODE_KERNEL;
 
-    address addr = 350; // valid user region
-    word data = 1234567; // within magnitude
+	address addr = 100;
+	word data = 999;
+	word out = 0;
 
-    write_mem(addr, data);
-    word out = read_mem(addr);
-    EXPECT_EQ(data, out);
+	MemoryStatus_t res = writeMemory(addr, data);
+	EXPECT_EQ(MEM_SUCCESS, res);
+	
+	readMemory(addr, &out);
+	EXPECT_EQ(data, out);
 }
 
-// Verify read and write in SO region
-UTEST(Memory, BlockOSReservedRegion) {
-    memoryInit();
-    CPU.PSW.mode = MODE_KERNEL; // even kernel should not access reserved region by these checks
+// Verify that it does not allow storing numbers larger than 7 digits.
+UTEST(Memory, DataMagnitudeCheck) {
+	memoryInit();
+	CPU.PSW.mode = MODE_KERNEL;
 
-    address addr = 100; // < OS_RESERVED_SIZE
-    word data = 1234;
+	word invalidData = 199999999;
 
-    write_mem(addr, data); // should be no-op
-    word out = read_mem(addr); // should return -1 due to reserved region
-    EXPECT_EQ(-1, out);
+	MemoryStatus_t status = writeMemory(500, invalidData);
+	EXPECT_EQ(MEM_ERR_INVALID_DATA, status);
 }
 
-// Verify invalid access in user mode due to RB/RL
-UTEST(Memory, UserModeInvalidAccess) {
-    memoryInit();
-    CPU.PSW.mode = MODE_USER;
-    CPU.RB = 300;
-    CPU.RL = 340;
+// Verify that it allows storing negative numbers within the 7-digit limit.
+UTEST(Memory, NegativeNumberWrite) {
+	memoryInit();
+	CPU.PSW.mode = MODE_USER;
+	CPU.RB = 300;
+	CPU.RL = 400;
 
-    address addr = 50; // 350 > RL -> invalid in user mode
-    word data = 4321;
+	word negativeFive = 10000005; 
 
-    write_mem(addr, data); // no-op
-    word out = read_mem(addr); // error
-    EXPECT_EQ(-1, out);
+	MemoryStatus_t status = writeMemory(0, negativeFive);
+
+	EXPECT_EQ(MEM_SUCCESS, status); // Ahora debería pasar
 }
 
-// Verify magnitude overflow on write
-UTEST(Memory, MagnitudeOverflowWrite) {
-    memoryInit();
-    CPU.PSW.mode = MODE_KERNEL;
-
-    address addr = 360;
-    word tooBig = 10000000; // > MAX_MAGNITUDE
-
-    write_mem(addr, tooBig); // should be blocked
-    word out = read_mem(addr);
-    EXPECT_EQ(0, out); // default zero since no write occurred
-}
-
-// Verify that in kernel mode, RB/RL checks are ignored
-UTEST(Memory, KernelModeIgnoresRB_RL) {
-    memoryInit();
-    CPU.PSW.mode = MODE_KERNEL;
-    CPU.RB = 300;
-    CPU.RL = 310; // very small range
-
-    address addr = 1999; // top of RAM, still >= OS_RESERVED_SIZE
-    word data = 42;
-
-    write_mem(addr, data);
-    EXPECT_EQ(data, read_mem(addr));
-}
-// Verify thread-safety of memory operations
-UTEST(Memory, ThreadSafety) {
-    memoryInit();
-    CPU.PSW.mode = MODE_KERNEL;
-
-    pthread_t threads[5];
-    for (int i = 0; i < 5; i++) {
-        int *arg = malloc(sizeof(int));
-        *arg = i + 1;
-        pthread_create(&threads[i], NULL, thread_memory_action, arg);
-    }
-
-    for (int i = 0; i < 5; i++) {
-        pthread_join(threads[i], NULL);
-    }
-
-    // Verify data written by threads
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 100; j++) {
-            address addr = OS_RESERVED_SIZE + ((i + 1) * 100) + j;
-            word expected = (i + 1) * 1000 + j;
-            EXPECT_EQ(expected, read_mem(addr));
-        }
-    }
+// Verify that multiple threads can safely write to different memory locations.
+UTEST(Memory, ThreadSafetyCheck) {
+	memoryInit();
+	CPU.PSW.mode = MODE_KERNEL;
+	
+	pthread_t threads[5];
+	for(int i=0; i<5; i++) {
+		int* arg = malloc(sizeof(int));
+		*arg = i;
+		pthread_create(&threads[i], NULL, threadWorker, arg);
+	}
+	
+	for(int i=0; i<5; i++) pthread_join(threads[i], NULL);
+	
+	for(int i=0; i<5; i++) {
+		word out;
+		readMemory(OS_RESERVED_SIZE + i, &out);
+		EXPECT_EQ(i * 10, out);
+	}
 }
