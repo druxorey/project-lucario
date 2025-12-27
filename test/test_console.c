@@ -8,27 +8,24 @@
 #include "../inc/cpu.h"
 #include "../inc/logger.h"
 
-UTEST_MAIN();
+CPU_t CPU;
+bool isDebugMode = false;
 
 static char spyLastFileName[CONSOLE_BUFFER_SIZE];
 static int spyCpuRunCallCount = 0;
 static int spyCpuStepCallCount = 0;
 
-CPU_t CPU;
-word RAM[RAM_SIZE];
-DMA_t DMA;
-Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];
-pthread_mutex_t BUS_LOCK;
-pthread_cond_t DMA_COND;
-
 // Mock for Loader
-LoaderStatus_t loaderLoadProgram(const char* fileName) {
+ProgramInfo_t loadProgram(char* fileName) {
+	ProgramInfo_t programInfo;
 	if (strcmp(fileName, "program.txt") == 0) {
 		strncpy(spyLastFileName, fileName, 99);
-		return LOADER_SUCCESS;
+		programInfo.status = LOAD_SUCCESS;
+		return programInfo;
 	}
 	strncpy(spyLastFileName, "", 99);
-    return LOADER_ERROR;
+	programInfo.status = LOAD_FILE_ERROR;
+    return programInfo;
 }
 
 // Mock for CPU Run (Normal Mode)
@@ -48,6 +45,8 @@ void cpuReset(void) {
 	return;
 }
 
+UTEST_MAIN();
+
 // Verify that the consoleProcessCommand function returns correct status codes for LOAD command
 UTEST(Console, LoadCommandReturnsCorrectCodes) {
 	loggerInit();
@@ -58,19 +57,19 @@ UTEST(Console, LoadCommandReturnsCorrectCodes) {
 
     strcpy(input, "LOAD program.txt\n");
     output = consoleProcessCommand(input);
-    ASSERT_EQ(output, CMD_SUCCESS);
+    ASSERT_EQ(output, (unsigned)CMD_SUCCESS);
 
     strcpy(input, "LOAD  program.txt\n");
     output = consoleProcessCommand(input);
-    ASSERT_EQ(output, CMD_SUCCESS);
+    ASSERT_EQ(output, (unsigned)CMD_SUCCESS);
 
     strcpy(input, "LOAD incorrect.txt\n");
     output = consoleProcessCommand(input);
-    ASSERT_EQ(output, CMD_LOAD_ERROR);
+    ASSERT_EQ(output, (unsigned)CMD_LOAD_ERROR);
 
     strcpy(input, "LOAD    \n");
     output = consoleProcessCommand(input);
-    ASSERT_EQ(output, CMD_MISSING_ARGS);
+    ASSERT_EQ(output, (unsigned)CMD_MISSING_ARGS);
 	loggerClose();
 }
 
@@ -81,7 +80,7 @@ UTEST(Console, RunCommandReturnsCorrectCode) {
 
     strcpy(input, "RUN\n");
     ConsoleStatus_t output = consoleProcessCommand(input);
-    ASSERT_EQ(output, CMD_SUCCESS);
+    ASSERT_EQ(output, (unsigned)CMD_SUCCESS);
 	loggerClose();
 }
 
@@ -92,7 +91,7 @@ UTEST(Console, ExitCommandReturnsCorrectCode) {
 
     strcpy(input, "EXIT\n");
     ConsoleStatus_t output = consoleProcessCommand(input);
-    ASSERT_EQ(output, CMD_EXIT);
+    ASSERT_EQ(output, (unsigned)CMD_EXIT);
 	loggerClose();
 }
 
@@ -103,7 +102,7 @@ UTEST(Console, EmptyInputReturnsCorrectCode) {
 
     strcpy(input, "\n");
     ConsoleStatus_t output = consoleProcessCommand(input);
-    ASSERT_EQ(output, CMD_EMPTY);
+    ASSERT_EQ(output, (unsigned)CMD_EMPTY);
 	loggerClose();
 }
 
@@ -114,7 +113,7 @@ UTEST(Console, UnknownCommandReturnsCorrectCode) {
 
     strcpy(input, "INCORRECT_COMMAND\n");
     ConsoleStatus_t output = consoleProcessCommand(input);
-    ASSERT_EQ(output, CMD_UNKNOWN);
+    ASSERT_EQ(output, (unsigned)CMD_UNKNOWN);
 	loggerClose();
 }
 

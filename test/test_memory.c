@@ -3,10 +3,11 @@
 #include "../lib/utest.h"
 #include "../inc/memory.h"
 
-UTEST_MAIN();
-
 // Global mock CPU instance
 CPU_t CPU;
+bool isDebugMode = false;
+
+UTEST_MAIN();
 
 // Auxiliary function for thread
 void* threadWorker(void* arg) {
@@ -30,8 +31,8 @@ UTEST(Memory, ReadWriteValidUserMode) {
 	MemoryStatus_t wStatus = writeMemory(logicalAddr, data);
 	MemoryStatus_t rStatus = readMemory(logicalAddr, &out);
 
-	EXPECT_EQ(MEM_SUCCESS, wStatus);
-	EXPECT_EQ(MEM_SUCCESS, rStatus);
+	EXPECT_EQ((unsigned)MEM_SUCCESS, wStatus);
+	EXPECT_EQ((unsigned)MEM_SUCCESS, rStatus);
 	EXPECT_EQ(data, out);
 	
 	// Verify the white-box: Was it written to physical 350?
@@ -54,10 +55,10 @@ UTEST(Memory, UserModeProtectionFault) {
 	word out = 0;
 
 	MemoryStatus_t status = writeMemory(invalidLogicalAddr, data);
-	EXPECT_EQ(MEM_ERR_PROTECTION, status);
+	EXPECT_EQ((unsigned)MEM_ERR_PROTECTION, status);
 
 	status = readMemory(invalidLogicalAddr, &out);
-	EXPECT_EQ(MEM_ERR_PROTECTION, status);
+	EXPECT_EQ((unsigned)MEM_ERR_PROTECTION, status);
 }
 
 // The Kernel should be able to write anywhere (e.g., load the OS).
@@ -70,7 +71,7 @@ UTEST(Memory, KernelBypassesProtection) {
 	word out = 0;
 
 	MemoryStatus_t res = writeMemory(addr, data);
-	EXPECT_EQ(MEM_SUCCESS, res);
+	EXPECT_EQ((unsigned)MEM_SUCCESS, res);
 	
 	readMemory(addr, &out);
 	EXPECT_EQ(data, out);
@@ -84,7 +85,7 @@ UTEST(Memory, DataMagnitudeCheck) {
 	word invalidData = 199999999;
 
 	MemoryStatus_t status = writeMemory(500, invalidData);
-	EXPECT_EQ(MEM_ERR_INVALID_DATA, status);
+	EXPECT_EQ((unsigned)MEM_ERR_INVALID_DATA, status);
 }
 
 // Verify that it allows storing negative numbers within the 7-digit limit.
@@ -98,7 +99,7 @@ UTEST(Memory, NegativeNumberWrite) {
 
 	MemoryStatus_t status = writeMemory(0, negativeFive);
 
-	EXPECT_EQ(MEM_SUCCESS, status); // Ahora debería pasar
+	EXPECT_EQ((unsigned)MEM_SUCCESS, status); // Ahora debería pasar
 }
 
 // Verify that multiple threads can safely write to different memory locations.

@@ -5,11 +5,28 @@
 #include "../inc/memory.h"
 #include "../inc/logger.h"
 
-static pthread_mutex_t program_mutex = PTHREAD_MUTEX_INITIALIZER;
+word readProgramWord(FILE* filePtr) {
+	char line[512];
+	word w = 0;
+
+	while (fgets(line, sizeof(line), filePtr) != NULL) {
+		char* comment = strstr(line, "//");
+		if (comment) {
+			*comment = '\0';
+		}
+
+		if (sscanf(line, "%d", &w) == 1) {
+			return w;
+		}
+	}
+
+	return 0;
+}
+
 
 ProgramInfo_t loadProgram(char* filePath) {
 	ProgramInfo_t programInfo = {0};
-	char logBuffer[256];
+	char logBuffer[LOG_BUFFER_SIZE];
 
 	snprintf(logBuffer, sizeof(logBuffer), "Loader: Attempting to load program from file '%s'.", filePath);
 	loggerLog(LOG_INFO, logBuffer);
@@ -39,9 +56,8 @@ ProgramInfo_t loadProgram(char* filePath) {
 
 				fclose(programFile);
 
-				ProgramInfo_t programInfoError = {0};
-				programInfoError.status = LOAD_MEMORY_ERROR;
-				return programInfoError;
+				programInfo.status = LOAD_MEMORY_ERROR;
+				return programInfo;
 			}
 		}
 		
@@ -64,9 +80,8 @@ ProgramInfo_t loadProgram(char* filePath) {
 		snprintf(logBuffer, sizeof(logBuffer), "Loader Error: Could not open file '%s'. Check path or permissions.", filePath);
 		loggerLog(LOG_ERROR, logBuffer);
 
-		ProgramInfo_t programInfoError = {0};
-		programInfoError.status = LOAD_FILE_ERROR;
-		return programInfoError;
+		programInfo.status = LOAD_FILE_ERROR;
+		return programInfo;
 	}
 	return programInfo;
 }

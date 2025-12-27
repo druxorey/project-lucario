@@ -4,11 +4,12 @@
 
 CPU_t CPU;
 word RAM[RAM_SIZE];
+bool isDebugMode = false;
 
 UTEST_MAIN();
 
 //Mock function for writing in memory
-int writeMemory(address addr, word value) {
+MemoryStatus_t writeMemory(address addr, word value) {
 	if (addr >= OS_RESERVED_SIZE && addr < RAM_SIZE) {
 		RAM[addr] = value;
 		return 0;
@@ -16,24 +17,18 @@ int writeMemory(address addr, word value) {
 	return 1;
 }
 
-word readProgramWord(FILE* filePtr) {
-	word w = 0;
-	fscanf(filePtr, "%d", &w);
-	return w;
-}
-
 // Auxiliary function to create a test input file
 void createTestInputFile(void) {
-	FILE* f = fopen("../test_program.txt", "r");
+	FILE* f = fopen("test_program.txt", "r");
 	if (f) {
 		fclose(f);
 	} else {
-		f = fopen("../test_program.txt", "w");
+		f = fopen("test_program.txt", "w");
 		if (f) {
 			fprintf(f, "_start 1\n");
 			fprintf(f, ".NumeroPalabras 7\n");
 			fprintf(f, ".NombreProg 5mas5\n");
-			fprintf(f, "04100005\n");
+			fprintf(f, "04100005   // Comentario\n");
 			fprintf(f, "00100005\n");
 			fprintf(f, "25000000\n");
 			fprintf(f, "04100007\n");
@@ -47,11 +42,11 @@ void createTestInputFile(void) {
 
 // Auxilary function to create a test input file with more words than memory can hold
 void createLargeTestInputFile(void) {
-	FILE* f = fopen("../large_test_program.txt", "r");
+	FILE* f = fopen("large_test_program.txt", "r");
 	if (f) {
 		fclose(f);
 	} else {
-		f = fopen("../large_test_program.txt", "w");
+		f = fopen("large_test_program.txt", "w");
 		fprintf(f, "_start 1\n");
 		fprintf(f, ".NumeroPalabras %d\n", RAM_SIZE + 1);
 		fprintf(f, ".NombreProg LargeProg\n");
@@ -65,7 +60,7 @@ void createLargeTestInputFile(void) {
 // Verify that the test input file is created correctly
 UTEST(Loader, FileCreation) {
 	createTestInputFile();
-	FILE* f = fopen("../test_program.txt", "r");
+	FILE* f = fopen("test_program.txt", "r");
 	ASSERT_TRUE(f != NULL);
 	if (f) fclose(f);
 }
@@ -73,7 +68,7 @@ UTEST(Loader, FileCreation) {
 // Verify that the large test input file is created correctly
 UTEST(Loader, LargeFileCreation) {
 	createLargeTestInputFile();
-	FILE* f = fopen("../large_test_program.txt", "r");
+	FILE* f = fopen("large_test_program.txt", "r");
 	ASSERT_TRUE(f != NULL);
 	if (f) fclose(f);
 }
@@ -81,7 +76,7 @@ UTEST(Loader, LargeFileCreation) {
 // Verify that readProgramWord reads the correct word from the file
 UTEST(Loader, ReadProgramWord) {
 	createTestInputFile();
-	FILE* f = fopen("../test_program.txt", "r");
+	FILE* f = fopen("test_program.txt", "r");
 	ASSERT_TRUE(f != NULL);
 	if (f) {
 		fscanf(f, "%*s %*d");
@@ -96,28 +91,28 @@ UTEST(Loader, ReadProgramWord) {
 // Verify that loadProgram loads the program correctly
 UTEST(Loader, LoadProgram) {
 	createTestInputFile();
-	ProgramInfo_t programInfo = loadProgram("../test_program.txt");
+	ProgramInfo_t programInfo = loadProgram("test_program.txt");
 	ASSERT_EQ(programInfo._start, 1);
 	ASSERT_EQ(programInfo.wordCount, 7);
 	ASSERT_STREQ(programInfo.programName, "5mas5");
-	ASSERT_EQ(programInfo.status, LOAD_SUCCESS);
+	ASSERT_EQ(programInfo.status, (unsigned)LOAD_SUCCESS);
 }
 
 // Verify that loadProgram handles file not found error
 UTEST(Loader, LoadProgramFileError) {
-	ProgramInfo_t programInfo = loadProgram("../non_existent_file.txt");
+	ProgramInfo_t programInfo = loadProgram("non_existent_file.txt");
 	ASSERT_EQ(programInfo._start, 0);
 	ASSERT_EQ(programInfo.wordCount, 0);
 	ASSERT_STREQ(programInfo.programName, "");
-	ASSERT_EQ(programInfo.status, LOAD_FILE_ERROR);
+	ASSERT_EQ(programInfo.status, (unsigned)LOAD_FILE_ERROR);
 }
 
 // Verify that loadProgram handles memory error when program is too large
 UTEST(Loader, LoadProgramMemoryError) {
 	createLargeTestInputFile();
-	ProgramInfo_t programInfo = loadProgram("../large_test_program.txt");
-	ASSERT_EQ(programInfo._start, 0);
-	ASSERT_EQ(programInfo.wordCount, 0);
-	ASSERT_STREQ(programInfo.programName, "");
-	ASSERT_EQ(programInfo.status, LOAD_MEMORY_ERROR);
+	ProgramInfo_t programInfo = loadProgram("large_test_program.txt");
+	ASSERT_EQ(programInfo._start, 1);
+	ASSERT_EQ(programInfo.wordCount, 2001);
+	ASSERT_STREQ(programInfo.programName, "LargeProg");
+	ASSERT_EQ(programInfo.status, (unsigned)LOAD_MEMORY_ERROR);
 }

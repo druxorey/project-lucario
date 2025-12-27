@@ -9,4 +9,4 @@ bool cpuStep(void);
 
 void cpuReset(void);
 
-#endif // LOGGER_H
+#endif // MOCK_CPU_H

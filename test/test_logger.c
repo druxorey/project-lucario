@@ -5,10 +5,12 @@
 #include "../lib/utest.h"
 #include "../inc/logger.h"
 
+bool isDebugMode = false;
+
 UTEST_MAIN();
 
 // Auxiliary function for threading test
-void* thread_log_action(void* arg) {
+void* threadLogAction(void* arg) {
 	int value = *((int*)arg);
 	for (int i = 0; i < 100; i++) {
 		char message[64];
@@ -73,6 +75,32 @@ UTEST(Logger, InterruptLogFormat) {
 	ASSERT_TRUE(found);
 }
 
+// Verify that debug messages are filtered based on debug mode
+UTEST(Logger, DebugFiltering) {
+	loggerInit();
+
+	isDebugMode = true;
+	
+	loggerLog(LOG_DEBUG, "Secret Debug Message 1");
+	loggerLog(LOG_INFO, "Message 2");
+	loggerLog(LOG_DEBUG, "Secret Debug Message 3");
+	
+	FILE *f = fopen("logs.txt", "r");
+	ASSERT_TRUE(f != NULL);
+	
+	char buffer[256];
+	int count = 0;
+	while (fgets(buffer, sizeof(buffer), f)) {
+		if (strstr(buffer, "Secret Debug Message")) {
+			count++;
+		}
+	}
+	fclose(f);
+
+	// Only the second message should be logged
+	ASSERT_EQ(2, count);
+}
+
 // Verify thread-safety of the logger
 UTEST(Logger, ThreadSafety) {
 	loggerInit();
@@ -82,8 +110,8 @@ UTEST(Logger, ThreadSafety) {
 	int *arg2 = malloc(sizeof(int));
 	*arg1 = 1;
 	*arg2 = 2;
-	pthread_create(&t1, NULL, thread_log_action, arg1);
-	pthread_create(&t2, NULL, thread_log_action, arg2);
+	pthread_create(&t1, NULL, threadLogAction, arg1);
+	pthread_create(&t2, NULL, threadLogAction, arg2);
 
 	pthread_join(t1, NULL);
 	pthread_join(t2, NULL);

@@ -49,7 +49,7 @@ void splitInput(const char* input, char* command, char* argument) {
 	// %s reads one word (up to the first space)
 	// %[^\n] reads "everything up to the newline" (the rest of the string)
 	// The space between %s and %[^\n] consumes the separating space
-	int matches = sscanf(input, "%19s %99[^\n]", command, argument);
+	sscanf(input, "%19s %99[^\n]", command, argument);
 
 	// sscanf returns how many variables it successfully filled
 	// If input is "RUN", matches will be 1 (argument remains empty due to the initial clearing)
@@ -78,7 +78,7 @@ int consoleStart(void) {
 
 
 ConsoleStatus_t consoleProcessCommand(char* input) {
-	char logBuffer[256];
+	char logBuffer[LOG_BUFFER_SIZE];
 	input[strcspn(input, "\n")] = 0;
 	input = trimWhitespace(input);
 
@@ -103,9 +103,12 @@ ConsoleStatus_t consoleProcessCommand(char* input) {
 			return CMD_MISSING_ARGS;
 		}
 
-		if (loaderLoadProgram(argument) == LOADER_SUCCESS) {
+		ProgramInfo_t info = loadProgram(argument);
+
+		if (info.status == LOAD_SUCCESS) {
 			printf("File '%s' loaded successfully.\n", argument);
-			snprintf(logBuffer, sizeof(logBuffer), "Program loaded successfully: %s", argument);
+			snprintf(logBuffer, sizeof(logBuffer), "Program loaded: %s (Words: %d, Start: %d)", 
+							argument, info.wordCount, info._start);
 			loggerLog(LOG_INFO, logBuffer);
 			return CMD_SUCCESS;
 		} else {
@@ -120,6 +123,7 @@ ConsoleStatus_t consoleProcessCommand(char* input) {
 		printf("Executing in Normal Mode...\n");
 		loggerLog(LOG_INFO, "Starting execution in Normal Mode.");
 
+		isDebugMode = false;
 		if (cpuRun()) {
 			printf("Execution finished.\n");
 			loggerLog(LOG_INFO, "Normal Mode execution finished successfully.");
@@ -134,11 +138,14 @@ ConsoleStatus_t consoleProcessCommand(char* input) {
 		printf("Executing in Debug Mode...\n");
 		loggerLog(LOG_INFO, "Starting execution in Debug Mode.");
 
+		isDebugMode = true;
 		if (runDebugMode()) {
+			isDebugMode = false;
 			printf("Execution finished.\n");
 			loggerLog(LOG_INFO, "Debug Mode session finished.");
 			return CMD_SUCCESS;
 		}
+		isDebugMode = false;
 		
 		loggerLog(LOG_ERROR, "Debug Mode execution terminated abnormally.");
 		return CMD_RUNTIME_ERROR;
@@ -162,9 +169,8 @@ int runDebugMode() {
 	printf("Press [ENTER] to step, 'q' to quit debug mode.\n");
 	
 	char debugBuf[10];
-	bool running = true;
 	
-	while(running) {
+	while(isDebugMode) {
 		printCpuState();
 		bool active = cpuStep();
 		
