@@ -32,7 +32,7 @@ UTEST(CPU, DecodeStage) {
     CPU.IR = 04100005;
     Instruction_t inst;
     inst = decode();
-    ASSERT_EQ(inst.opCode, OP_LOAD);
-    ASSERT_EQ(inst.direction, DIR_DIRECT);
+    ASSERT_EQ(inst.opCode, (unsigned)OP_LOAD);
+    ASSERT_EQ(inst.direction, (unsigned)DIR_DIRECT);
     ASSERT_EQ(inst.value, 5);
 }
