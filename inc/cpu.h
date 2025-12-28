@@ -9,7 +9,7 @@
  */
 typedef enum {
 	CPU_OK = 0,          /**< CPU operation successful */
-    CPU_HALT = 1,        /**< CPU has reached a halt instruction */
+    CPU_STOP = 1,        /**< CPU has reached a stop condition */
 } CPUStatus_t;
 
 /**

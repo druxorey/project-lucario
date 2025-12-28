@@ -8,7 +8,8 @@
 CPUStatus_t fetch(void) {
     CPU.MAR = CPU.PSW.pc;
     if (readMemory(CPU.MAR, &CPU.MDR) != MEM_SUCCESS) {
-        return CPU_HALT;    // readMemory is in charge of logging the error
+        loggerLogInterrupt(IC_INVALID_ADDR);
+        return CPU_STOP;
     }
     CPU.IR = CPU.MDR;
     CPU.PSW.pc += 1;
@@ -129,7 +130,7 @@ CPUStatus_t execute(Instruction_t instruction) {
             return CPU_OK;
         default:
             loggerLogInterrupt(IC_INVALID_INSTR);
-            return CPU_HALT;
+            return CPU_STOP;
     }
 }
 
