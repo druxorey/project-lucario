@@ -34,6 +34,53 @@ typedef enum {
 void raiseInterrupt(InterruptCode_t code);
 
 /**
+ * @brief Converts a Virtual Machine Word (Sign-Magnitude) to a C Integer.
+ *
+ * The architecture uses 8-digit decimal Sign-Magnitude (1xxxxxxx = Negative).
+ * C uses Two's Complement. This helper performs the necessary translation
+ * for arithmetic operations.
+ *
+ * @param w The 8-digit word from memory or register.
+ * @return int The standard C integer representation.
+ */
+int wordToInt(word w);
+
+/**
+ * @brief Converts a C Integer to a Virtual Machine Word (Sign-Magnitude).
+ *
+ * Translates the result of a C operation back to the architecture's format.
+ * This function is also responsible for:
+ * 1. Setting PSW flags (Zero, Negative, Positive).
+ * 2. Detecting Overflow (Magnitudes > 7 digits).
+ *
+ * @param intValue The standard C integer to convert.
+ * @param[out] psw Pointer to the PSW to update status flags.
+ * @return word The 8-digit Sign-Magnitude representation (truncated on overflow).
+ */
+word intToWord(int intValue, PSW_t *psw);
+
+/**
+ * @brief Retrieves the effective value of an instruction operand.
+ *
+ * Resolves the operand of the decoded instruction according to its addressing mode
+ *
+ * @param instr Decoded instruction from which the operand value will be obtained.
+ * @return word Effective operand value ready to be used by the ALU or control unit.
+ */
+word getOperandValue(Instruction_t instr);
+
+/**
+ * @brief Performs an Arithmetic Logic Unit (ALU) operation.
+ *
+ * Handles logic for SUM, RES, MULT, and DIVI. It updates the Accumulator (AC)
+ * and the Condition Codes in the PSW.
+ *
+ * @param op The arithmetic operation code (OP_SUM, OP_RES, etc.).
+ * @param operandValue The resolved integer value of the operand (not the address).
+ */
+void executeArithmetic(OpCode_t op, word operandValue);
+
+/**
  * @brief Executes the Fetch phase of the instruction cycle.
  *
  * Moves the PC value to MAR, reads from Memory into MDR, and updates the IR.
@@ -63,43 +110,6 @@ Instruction_t decode(void);
  * @return CPUStatus_t The result of the execution (e.g., CPU_HALT if EXIT).
  */
 CPUStatus_t execute(Instruction_t instruction);
-
-/**
- * @brief Converts a Virtual Machine Word (Sign-Magnitude) to a C Integer.
- *
- * The architecture uses 8-digit decimal Sign-Magnitude (1xxxxxxx = Negative).
- * C uses Two's Complement. This helper performs the necessary translation
- * for arithmetic operations.
- *
- * @param w The 8-digit word from memory or register.
- * @return int The standard C integer representation.
- */
-int wordToInt(word w);
-
-/**
- * @brief Converts a C Integer to a Virtual Machine Word (Sign-Magnitude).
- *
- * Translates the result of a C operation back to the architecture's format.
- * This function is also responsible for:
- * 1. Setting PSW flags (Zero, Negative, Positive).
- * 2. Detecting Overflow (Magnitudes > 7 digits).
- *
- * @param intValue The standard C integer to convert.
- * @param[out] psw Pointer to the PSW to update status flags.
- * @return word The 8-digit Sign-Magnitude representation (truncated on overflow).
- */
-word intToWord(int intValue, PSW_t *psw);
-
-/**
- * @brief Performs an Arithmetic Logic Unit (ALU) operation.
- *
- * Handles logic for SUM, RES, MULT, and DIVI. It updates the Accumulator (AC)
- * and the Condition Codes in the PSW.
- *
- * @param op The arithmetic operation code (OP_SUM, OP_RES, etc.).
- * @param operandValue The resolved integer value of the operand (not the address).
- */
-void executeArithmetic(OpCode_t op, word operandValue);
 
 /**
  * @brief Main execution loop (Normal Mode).

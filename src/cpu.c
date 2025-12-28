@@ -3,6 +3,7 @@
 
 #include "../inc/logger.h"
 #include "../inc/cpu.h"
+#include "../inc/memory.h"
 
 static bool interruptPending = false;
 static InterruptCode_t pendingInterruptCode = 0;
@@ -22,11 +23,10 @@ int wordToInt(word w) {
 word intToWord(int intValue, PSW_t* psw) {
 	word wordValue = 0;
 	
-	int magnitude = (intValue >= 0) ? intValue : -1 * intValue;
+	int magnitude = (intValue >= 0) ? intValue : -intValue;
 	bool isNegative = (intValue < 0);
 
 	if (magnitude > MAX_MAGNITUDE) {
-		printf("Overflow detected: intValue=%d exceeds MAX_MAGNITUDE=%d\n", intValue, MAX_MAGNITUDE);
 		psw->conditionCode = CC_OVERFLOW;
 		magnitude = magnitude % (MAX_MAGNITUDE + 1);
 		raiseInterrupt(IC_OVERFLOW);
@@ -42,6 +42,37 @@ word intToWord(int intValue, PSW_t* psw) {
 	}
 
 	return wordValue;
+}
+
+
+word getOperandValue(Instruction_t instruction) {
+	word returnValue = 0;
+	MemoryStatus_t ret;
+	switch (instruction.direction) {
+		case DIR_IMMEDIATE: {
+			returnValue = intToWord(instruction.value, &CPU.PSW);
+			break;
+		}
+		case DIR_DIRECT: {
+			address addr = instruction.value;
+			ret = readMemory(addr, &returnValue);
+			break;
+		}
+		case DIR_INDEXED: {
+			address addr = instruction.value + wordToInt(CPU.RX);
+			ret = readMemory(addr, &returnValue);
+			break;
+		}
+		default:
+			raiseInterrupt(IC_INVALID_INSTR);
+			break;
+	}
+
+	if (ret != MEM_SUCCESS) {
+		raiseInterrupt(IC_INVALID_ADDR);
+	}
+
+	return returnValue;
 }
 
 
