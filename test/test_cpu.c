@@ -67,7 +67,7 @@ UTEST(CPU, ExecuteStageDefault) {
     ASSERT_EQ(inst.direction, (unsigned)DIR_IMMEDIATE);
     ASSERT_EQ(inst.value, 5);
     CPUStatus_t status = execute(inst);
-    ASSERT_EQ(status, CPU_STOP);
+    ASSERT_EQ(status, (unsigned)CPU_STOP);
 }
 
 // Verify that instruction cycle goes correctly through fetch, decode, and execute given a valid instruction
