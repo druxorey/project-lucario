@@ -8,7 +8,7 @@
 CPUStatus_t fetch(void) {
     CPU.MAR = CPU.PSW.pc;
     if (readMemory(CPU.MAR, &CPU.MDR) != MEM_SUCCESS) {
-        return CPU_HALT;    
+        return CPU_HALT;    // readMemory is in charge of logging the error
     }
     CPU.IR = CPU.MDR;
     CPU.PSW.pc += 1;
