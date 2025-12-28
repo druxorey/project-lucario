@@ -5,6 +5,7 @@
 #include "../inc/logger.h"
 #include "../inc/memory.h"
 #include "../inc/console.h"
+#include "../inc/cpu.h"
 
 // Global debug flag definition 
 bool isDebugMode = false; 
@@ -17,11 +18,11 @@ int main(int argc, char* argv[]) {
 	// Boot Sequence
 	loggerInit();
 	memoryInit();
-	loggerLog(LOG_INFO, "System Boot sequence initiated,");
+	loggerLog(LOG_INFO, "System Boot sequence initiated.");
 
 	// Shutdown Sequence
 	if(consoleStart() == 0) {
-		loggerLog(LOG_INFO, "System Shutdown completed successfully");
+		loggerLog(LOG_INFO, "System Shutdown completed successfully.");
 		loggerClose();
 		pthread_mutex_destroy(&BUS_LOCK);
 	}
