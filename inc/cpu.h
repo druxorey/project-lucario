@@ -13,6 +13,7 @@
 #define CPU_H
 
 #include "../inc/definitions.h"
+#include "memory.h"
 
 /**
  * @brief CPU Status Codes.
@@ -22,6 +23,11 @@ typedef enum {
 	CPU_OK = 0,         /**< CPU operation successful; continue execution. */
 	CPU_HALT = 1,       /**< CPU has reached a halt instruction or condition. */
 } CPUStatus_t;
+
+typedef enum {
+	INSTR_EXEC_SUCCESS = 0,
+	INSTR_EXEC_FAIL = 1
+} InstructionStatus_t;
 
 /**
  * @brief Triggers a hardware interrupt or exception.
@@ -67,7 +73,15 @@ word intToWord(int intValue, PSW_t *psw);
  * @param instr Decoded instruction from which the operand value will be obtained.
  * @return word Effective operand value ready to be used by the ALU or control unit.
  */
-word getOperandValue(Instruction_t instr);
+InstructionStatus_t fetchOperand(Instruction_t instr, word *outValue);
+
+/**
+ * @brief Calculates the target memory address for instructions.
+ * Used for STR (Store) and Jump instructions.
+ * @param instr The decoded instruction.
+ * @return address The physical/logical address (Value + Index if needed).
+ */
+address calculateEffectiveAddress(Instruction_t instr);
 
 /**
  * @brief Performs an Arithmetic Logic Unit (ALU) operation.
@@ -78,7 +92,26 @@ word getOperandValue(Instruction_t instr);
  * @param op The arithmetic operation code (OP_SUM, OP_RES, etc.).
  * @param operandValue The resolved integer value of the operand (not the address).
  */
-void executeArithmetic(OpCode_t op, word operandValue);
+InstructionStatus_t executeArithmetic(OpCode_t op, word operandValue);
+
+/**
+ * @brief Handles Data Movement instructions (LOAD, STR, MOV registers).
+ * Covers OpCodes: 04-07, 19-26.
+ */
+InstructionStatus_t executeDataMovement(Instruction_t instr);
+
+/**
+ * @brief Handles Flow Control instructions (Jumps).
+ * Covers OpCodes: 09-12, 27.
+ */
+InstructionStatus_t executeBranching(Instruction_t instr);
+
+/**
+ * @brief Handles Comparison instruction (COMP).
+ * Performs a subtraction (AC - Operand) to update flags, but discards result.
+ * Covers OpCode: 08.
+ */
+InstructionStatus_t executeComparison(word operandValue);
 
 /**
  * @brief Executes the Fetch phase of the instruction cycle.
