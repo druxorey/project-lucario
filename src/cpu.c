@@ -15,6 +15,13 @@ static void updatePSWFlags(void) {
 	else CPU.PSW.conditionCode = CC_POS;
 }
 
+static CPUStatus_t checkStatus(InstructionStatus_t status) {
+	if (status == INSTR_EXEC_FAIL) {
+		return CPU_STOP;
+	}
+	return CPU_OK;
+}
+
 
 void raiseInterrupt(InterruptCode_t code) {
 	loggerLogInterrupt(code);
@@ -83,7 +90,10 @@ InstructionStatus_t fetchOperand(Instruction_t instr, word *outValue) {
 }
 
 
-InstructionStatus_t executeArithmetic(OpCode_t op, word operandValue) {
+InstructionStatus_t executeArithmetic(Instruction_t instruction) {
+	OpCode_t op = instruction.opCode;
+	word operandValue;
+	if (fetchOperand(instruction, &operandValue)) return INSTR_EXEC_FAIL;
 	int accumulatorValue = wordToInt(CPU.AC);
 	int operandIntValue = wordToInt(operandValue);
 	switch (op) {
@@ -186,7 +196,7 @@ InstructionStatus_t executeDataMovement(Instruction_t instr) {
 
 InstructionStatus_t executeBranching(Instruction_t instruction) {
 	if (instruction.opCode == OP_J) {
-		CPU.PSW.pc = calculateEffectiveAddress(instruction) - 1;
+		CPU.PSW.pc = calculateEffectiveAddress(instruction);
 		return INSTR_EXEC_SUCCESS;
 	}
 
@@ -221,14 +231,16 @@ InstructionStatus_t executeBranching(Instruction_t instruction) {
 	}
 
 	if (shouldJump) {
-		CPU.PSW.pc = calculateEffectiveAddress(instruction) - 1;
+		CPU.PSW.pc = calculateEffectiveAddress(instruction);
 	}
 
 	return INSTR_EXEC_SUCCESS;
 }
 
 
-InstructionStatus_t executeComparison(word operandValue) {
+InstructionStatus_t executeComparison(Instruction_t instruction) {
+	word operandValue;
+	if (fetchOperand(instruction, &operandValue)) return INSTR_EXEC_FAIL;
 	int acVal = wordToInt(CPU.AC);
 	int opVal = wordToInt(operandValue);
 	int result = acVal - opVal;
@@ -268,108 +280,110 @@ Instruction_t decode(void) {
 }
 
 CPUStatus_t execute(Instruction_t instruction) {
-	InstructionStatus_t status;
+	InstructionStatus_t status = INSTR_EXEC_SUCCESS;
 	switch (instruction.opCode) {
 		case OP_SUM:
-			return CPU_OK;
+			status = executeArithmetic(instruction);
+			return checkStatus(status);
 		case OP_RES:
-			// Implementation
-			return CPU_OK;
+			status = executeArithmetic(instruction);
+			return checkStatus(status);
 		case OP_MULT:
-			// Implementation
-			return CPU_OK;
+			status = executeArithmetic(instruction);
+			return checkStatus(status);
 		case OP_DIVI:
-			// Implementation
-			return CPU_OK;
+			status = executeArithmetic(instruction);
+			return checkStatus(status);
 		case OP_LOAD:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_STR:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_LOADRX:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_STRRX:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_COMP:
-			return CPU_OK;
+			status = executeComparison(instruction);
+			return checkStatus(status);
 		case OP_JMPE:
 			status = executeBranching(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_JMPNE:
 			status = executeBranching(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_JMPLT:
 			status = executeBranching(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_JMPLGT:
 			status = executeBranching(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_SVC:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_RETRN:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_HAB:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_DHAB:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_TTI:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_CHMOD:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_LOADRB:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_STRRB:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_LOADRL:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_STRRL:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_LOADSP:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_STRSP:
 			status = executeDataMovement(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_PSH:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_POP:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_J:
 			status = executeBranching(instruction);
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_SDMAP:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_SDMAC:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_SDMAS:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_SDMAIO:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_SDMAM:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		case OP_SDMAON:
 			// Implementation
-			return CPU_OK;
+			return checkStatus(status);
 		default:
 			loggerLogInterrupt(IC_INVALID_INSTR);
 			return CPU_STOP;

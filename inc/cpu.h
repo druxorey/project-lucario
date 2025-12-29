@@ -92,7 +92,7 @@ address calculateEffectiveAddress(Instruction_t instr);
  * @param op The arithmetic operation code (OP_SUM, OP_RES, etc.).
  * @param operandValue The resolved integer value of the operand (not the address).
  */
-InstructionStatus_t executeArithmetic(OpCode_t op, word operandValue);
+InstructionStatus_t executeArithmetic(Instruction_t instruction);
 
 /**
  * @brief Handles Data Movement instructions (LOAD, STR, MOV registers).
@@ -111,7 +111,7 @@ InstructionStatus_t executeBranching(Instruction_t instr);
  * Performs a subtraction (AC - Operand) to update flags, but discards result.
  * Covers OpCode: 08.
  */
-InstructionStatus_t executeComparison(word operandValue);
+InstructionStatus_t executeComparison(Instruction_t instruction);
 
 /**
  * @brief Executes the Fetch phase of the instruction cycle.

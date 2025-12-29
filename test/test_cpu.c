@@ -29,6 +29,7 @@ UTEST_MAIN();
 
 // Verify that the fetch stage correctly loads instruction into IR
 UTEST(CPU, FetchStage) {
+	cpuReset();
 	writeMemory(300, 4100005);
 	CPU.PSW.pc = 300;
 	fetch();
@@ -40,17 +41,19 @@ UTEST(CPU, FetchStage) {
 
 // Verify that the fetch stage correctly manages out-of-bounds memory access
 UTEST(CPU, FetchStageOutOfBounds) {
+	cpuReset();
 	writeMemory(2001, 4100005);
 	CPU.PSW.pc = 2001;
 	fetch();
 	ASSERT_EQ(CPU.MAR, 2001);
-	ASSERT_EQ(CPU.MDR, 4100005);
-	ASSERT_EQ(CPU.IR, 4100005);
+	ASSERT_EQ(CPU.MDR, 0);
+	ASSERT_EQ(CPU.IR, 0);
 	ASSERT_EQ(CPU.PSW.pc, 2001);
 }
 
 // Verify that the decode stage correctly interprets the instruction in IR
 UTEST(CPU, DecodeStage) {
+	cpuReset();
 	CPU.IR = 4100005;
 	Instruction_t inst;
 	inst = decode();
@@ -59,8 +62,24 @@ UTEST(CPU, DecodeStage) {
 	ASSERT_EQ(inst.value, 5);
 }
 
-// Because execute is currently missing implementations, only the default case can be tested
+// Verify that the execute stage correctly handles an valid instruction
+UTEST(CPU, ExecuteStage) {
+	cpuReset();
+	CPU.AC = 7;
+	CPU.IR = 100014; // OP_SUM, Immediate, 14
+	Instruction_t inst;
+	inst = decode();
+	ASSERT_EQ(inst.opCode, (unsigned)OP_SUM);
+	ASSERT_EQ(inst.direction, (unsigned)DIR_IMMEDIATE);
+	ASSERT_EQ(inst.value, 14);
+	CPUStatus_t status = execute(inst);
+	ASSERT_EQ(CPU.AC, 21);
+	ASSERT_EQ(status, (unsigned)CPU_OK);
+}
+
+// Verify that the execute stage correctly handles an invalid instruction
 UTEST(CPU, ExecuteStageDefault) {
+	cpuReset();
 	CPU.IR = 34100005; // Invalid OpCode (0-33 are valid)
 	Instruction_t inst;
 	inst = decode();
@@ -73,7 +92,8 @@ UTEST(CPU, ExecuteStageDefault) {
 
 // Verify that instruction cycle goes correctly through fetch, decode, and execute given a valid instruction
 UTEST(CPU, InstructionCycleValidInstruction) {
-	writeMemory(400, 00100010);
+	cpuReset();
+	writeMemory(400, 100010);
 	CPU.PSW.pc = 400;
 	bool stepResult = cpuStep();
 	ASSERT_TRUE(stepResult);
@@ -82,6 +102,7 @@ UTEST(CPU, InstructionCycleValidInstruction) {
 
 // Verify that instruction cycle manages correctly an invalid instruction
 UTEST(CPU, InstructionCycleInvalidInstruction) {
+	cpuReset();
 	writeMemory(321, 45678901);
 	CPU.PSW.pc = 321;
 	bool stepResult = cpuStep();
@@ -91,6 +112,7 @@ UTEST(CPU, InstructionCycleInvalidInstruction) {
 
 // Verify that instruction cycle manages correctly an invalid address
 UTEST(CPU, InstructionCycleInvalidAddress) {
+	cpuReset();
 	writeMemory(2001, 45678901);
 	CPU.PSW.pc = 2001;
 	bool stepResult = cpuStep();
