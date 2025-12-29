@@ -24,6 +24,16 @@ MemoryStatus_t writeMemory(address addr, word value) {
     return MEM_ERR_OUT_OF_BOUNDS;
 }
 
+// Mock for Read Memory (Bypasses MMU and Mutex for Unit Testing)
+MemoryStatus_t readMemory(address addr, word* outData) {
+    if (addr >= 0 && addr < RAM_SIZE) {
+        *outData = RAM[addr];
+        return MEM_SUCCESS;
+    }
+    *outData = 0;
+    return MEM_ERR_OUT_OF_BOUNDS;
+}
+
 UTEST_MAIN();
 
 // Verify that the fetch stage correctly loads instruction into IR
