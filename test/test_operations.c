@@ -8,19 +8,15 @@ bool isDebugMode = false;
 
 static bool mockMemoryFailProtection = false;
 
-int cpuRun(void) { return 1; } // Mock for CPU Run (Normal Mode)
-bool cpuStep(void) { return false; } // Mock for CPU Step (Debug Mode)
-void cpuReset(void) { return; } // Mock for CPU Reset (Normal Mode)
-
 //Mock function for writing in memory
 MemoryStatus_t writeMemory(address addr, word data) {
 	if (mockMemoryFailProtection) {
-	    return MEM_ERR_PROTECTION;
+		return MEM_ERR_PROTECTION;
 	}
 
 	if (addr >= 0 && addr < RAM_SIZE) {
-	    RAM[addr] = data;
-	    return MEM_SUCCESS;
+		RAM[addr] = data;
+		return MEM_SUCCESS;
 	}
 
 	return MEM_ERR_OUT_OF_BOUNDS;
