@@ -14,6 +14,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
 
 DEPS_console = $(OBJ_DIR)/console.o $(OBJ_DIR)/logger.o
 DEPS_cpu = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
+DEPS_operations = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
 DEPS_definitions =
 DEPS_loader = $(OBJ_DIR)/loader.o $(OBJ_DIR)/logger.o
 DEPS_logger = $(OBJ_DIR)/logger.o

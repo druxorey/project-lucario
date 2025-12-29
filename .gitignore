@@ -16,4 +16,5 @@ obj/*
 docs/report/*
 logs.txt
 test_program.txt
+large_test_program.txt
 .vscode
