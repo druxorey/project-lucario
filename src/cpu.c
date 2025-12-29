@@ -283,26 +283,14 @@ CPUStatus_t execute(Instruction_t instruction) {
 	InstructionStatus_t status = INSTR_EXEC_SUCCESS;
 	switch (instruction.opCode) {
 		case OP_SUM:
-			status = executeArithmetic(instruction);
-			return checkStatus(status);
 		case OP_RES:
-			status = executeArithmetic(instruction);
-			return checkStatus(status);
 		case OP_MULT:
-			status = executeArithmetic(instruction);
-			return checkStatus(status);
 		case OP_DIVI:
 			status = executeArithmetic(instruction);
 			return checkStatus(status);
 		case OP_LOAD:
-			status = executeDataMovement(instruction);
-			return checkStatus(status);
 		case OP_STR:
-			status = executeDataMovement(instruction);
-			return checkStatus(status);
 		case OP_LOADRX:
-			status = executeDataMovement(instruction);
-			return checkStatus(status);
 		case OP_STRRX:
 			status = executeDataMovement(instruction);
 			return checkStatus(status);
@@ -310,14 +298,8 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeComparison(instruction);
 			return checkStatus(status);
 		case OP_JMPE:
-			status = executeBranching(instruction);
-			return checkStatus(status);
 		case OP_JMPNE:
-			status = executeBranching(instruction);
-			return checkStatus(status);
 		case OP_JMPLT:
-			status = executeBranching(instruction);
-			return checkStatus(status);
 		case OP_JMPLGT:
 			status = executeBranching(instruction);
 			return checkStatus(status);
@@ -340,20 +322,10 @@ CPUStatus_t execute(Instruction_t instruction) {
 			// Implementation
 			return checkStatus(status);
 		case OP_LOADRB:
-			status = executeDataMovement(instruction);
-			return checkStatus(status);
 		case OP_STRRB:
-			status = executeDataMovement(instruction);
-			return checkStatus(status);
 		case OP_LOADRL:
-			status = executeDataMovement(instruction);
-			return checkStatus(status);
 		case OP_STRRL:
-			status = executeDataMovement(instruction);
-			return checkStatus(status);
 		case OP_LOADSP:
-			status = executeDataMovement(instruction);
-			return checkStatus(status);
 		case OP_STRSP:
 			status = executeDataMovement(instruction);
 			return checkStatus(status);

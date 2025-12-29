@@ -102,11 +102,14 @@ UTEST(CPU_ALU, ConversionIntToWord) {
 // Test execution of arithmetic operations
 UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	InstructionStatus_t ret;
+	Instruction_t instruction;
 
 	// Test for sum
 	setupCleanCPU();
 	CPU.AC = 5;
-	ret = executeArithmetic(OP_SUM, 10); // 5 + 10
+	CPU.IR = 100010; // SUM Immediate 10
+	instruction = decode();
+	ret = executeArithmetic(instruction); // 5 + 10
 	ASSERT_EQ(15, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
@@ -114,15 +117,19 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	// Test for subtraction
 	setupCleanCPU();
 	CPU.AC = 5;
-	ret = executeArithmetic(OP_RES, 10); // 5 - 10
+	CPU.IR = 1100010; // RES Immediate 10
+	instruction = decode();
+	ret = executeArithmetic(instruction); // 5 - 10
 	ASSERT_EQ(SIGN_BIT + 5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_NEG, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
-
+	
 	setupCleanCPU();
 	CPU.AC = SIGN_BIT + 5; // -5
-	word op = SIGN_BIT + 10; // -10
-	ret = executeArithmetic(OP_RES, op); // -5 - (-10)
+	writeMemory(300, intToWord(-10, &CPU.PSW)); // RAM[300] = -10
+	CPU.IR = 1000300; // RES Direct RAM[300]
+	instruction = decode();
+	ret = executeArithmetic(instruction); // -5 - (-10)
 	ASSERT_EQ(5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
@@ -130,7 +137,10 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	// Test for multiplication
 	setupCleanCPU();
 	CPU.AC = SIGN_BIT + 2;
-	ret = executeArithmetic(OP_MULT, SIGN_BIT + 3); // -2 * -3
+	writeMemory(300, intToWord(-3, &CPU.PSW)); // RAM[300] = -3
+	CPU.IR = 2000300; // MULT Direct RAM[300]
+	instruction = decode();
+	ret = executeArithmetic(instruction); // -2 * -3
 	ASSERT_EQ(6, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
@@ -138,14 +148,18 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	// Test for division
 	setupCleanCPU();
 	CPU.AC = 20;
-	ret = executeArithmetic(OP_DIVI, 4);
+	CPU.IR = 3100004; // DIVI Immediate 4
+	instruction = decode();
+	ret = executeArithmetic(instruction); // 20 / 4 = 5
 	ASSERT_EQ(5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
 	setupCleanCPU();
 	CPU.AC = 5;
-	ret = executeArithmetic(OP_DIVI, 2); // 5 / 2 = 2.5 -> 2
+	CPU.IR = 3100002; // DIVI Immediate 2
+	instruction = decode();
+	ret = executeArithmetic(instruction); // 5 / 2 = 2.5 -> 2
 	ASSERT_EQ(2, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
@@ -153,7 +167,9 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	// Overflow test for addition
 	setupCleanCPU();
 	CPU.AC = MAX_MAGNITUDE;
-	ret = executeArithmetic(OP_SUM, 1);
+	CPU.IR = 100001; // 00100001 SUM Immediate 1
+	instruction = decode();
+	ret = executeArithmetic(instruction);
 	ASSERT_EQ(0, CPU.AC); // We wait for truncation to 0 (10000000 % 10000000) and flag
 	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
@@ -161,9 +177,13 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 
 // Test division by zero handling
 UTEST(CPU_ALU, ExecuteArithmeticDivByZero) {
+	Instruction_t instruction;
+
 	setupCleanCPU();
 	CPU.AC = 10;
-	InstructionStatus_t ret = executeArithmetic(OP_DIVI, 0);
+	CPU.IR = 3100000; // DIVI Immediate 0
+	instruction = decode();
+	InstructionStatus_t ret = executeArithmetic(instruction);
 	ASSERT_EQ(10, CPU.AC);
 	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
@@ -171,9 +191,13 @@ UTEST(CPU_ALU, ExecuteArithmeticDivByZero) {
 
 // Test execution of non-arithmetic operations using the ALU
 UTEST(CPU_ALU, ExecuteNonArithmeticOperation){
+	Instruction_t instruction;
+
 	setupCleanCPU();
 	CPU.AC = 5;
-	InstructionStatus_t status = executeArithmetic(OP_COMP, 5);
+	CPU.IR = 8000005; // COMP Immediate 5
+	instruction = decode();
+	InstructionStatus_t status = executeArithmetic(instruction);
 	ASSERT_EQ(5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
@@ -381,7 +405,7 @@ UTEST(CPU_DataMov, LoadAndStoreRX) {
 UTEST(CPU_Branching, UnconditionalJump) {
 	Instruction_t instr;
 	InstructionStatus_t status;
-	word initialPc = 100, jumpAddr = 400, offset = 5, expectedPc = 399;
+	word initialPc = 100, jumpAddr = 400, offset = 5, expectedPc = 400;
 
 	instr.opCode = OP_J;
 
@@ -393,8 +417,6 @@ UTEST(CPU_Branching, UnconditionalJump) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
 	ASSERT_EQ(expectedPc, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
@@ -406,8 +428,6 @@ UTEST(CPU_Branching, UnconditionalJump) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
 	ASSERT_EQ(expectedPc, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
@@ -420,8 +440,6 @@ UTEST(CPU_Branching, UnconditionalJump) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
 	ASSERT_EQ(expectedPc + offset, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 }
@@ -446,9 +464,7 @@ UTEST(CPU_Branching, JumpEqualSuccess) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1, CPU.PSW.pc);
+	ASSERT_EQ(addr, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Successful jump when AC == M[SP] [Immediate Mode]
@@ -463,9 +479,7 @@ UTEST(CPU_Branching, JumpEqualSuccess) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1, CPU.PSW.pc);
+	ASSERT_EQ(addr, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Successful jump when AC == M[SP] [Indexed Mode]
@@ -480,9 +494,7 @@ UTEST(CPU_Branching, JumpEqualSuccess) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1 + offset, CPU.PSW.pc);
+	ASSERT_EQ(addr + offset, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Jump not taken when AC != M[SP] [Direct Mode]
@@ -551,9 +563,7 @@ UTEST(CPU_Branching, JumpNotEqual) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1, CPU.PSW.pc);
+	ASSERT_EQ(addr, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Successful jump when AC != M[SP] [Immediate Mode]
@@ -568,9 +578,7 @@ UTEST(CPU_Branching, JumpNotEqual) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1, CPU.PSW.pc);
+	ASSERT_EQ(addr, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Successful jump when AC != M[SP] [Indexed Mode]
@@ -585,9 +593,7 @@ UTEST(CPU_Branching, JumpNotEqual) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1 + offset, CPU.PSW.pc);
+	ASSERT_EQ(addr + offset, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 }
 
@@ -611,9 +617,7 @@ UTEST(CPU_Branching, JumpLessThan) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1, CPU.PSW.pc);
+	ASSERT_EQ(addr, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Successful jump when AC <= M[SP] [Immediate Mode]
@@ -628,9 +632,7 @@ UTEST(CPU_Branching, JumpLessThan) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1, CPU.PSW.pc);
+	ASSERT_EQ(addr, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Successful jump when AC <= M[SP] [Indexed Mode]
@@ -645,9 +647,7 @@ UTEST(CPU_Branching, JumpLessThan) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1 + offset, CPU.PSW.pc);
+	ASSERT_EQ(addr + offset, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 }
 
@@ -671,9 +671,7 @@ UTEST(CPU_Branching, JumpGreaterThan) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1, CPU.PSW.pc);
+	ASSERT_EQ(addr, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Successful jump when AC >= M[SP] [Immediate Mode]
@@ -688,9 +686,7 @@ UTEST(CPU_Branching, JumpGreaterThan) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1, CPU.PSW.pc);
+	ASSERT_EQ(addr, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Successful jump when AC >= M[SP] [Indexed Mode]
@@ -705,47 +701,50 @@ UTEST(CPU_Branching, JumpGreaterThan) {
 
 	status = executeBranching(instr);
 
-	// It should have jumped to the previous instruction
-	// Because pc will be incremented after
-	ASSERT_EQ(addr - 1 + offset, CPU.PSW.pc);
+	ASSERT_EQ(addr + offset, CPU.PSW.pc);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 }
 
 // Verify comparison instruction (COMP) logic and flags
 UTEST(CPU_ALU, CompareInstruction) {
-	word operand;
+	Instruction_t instruction;
 
 	// Iquality (5 == 5)
 	setupCleanCPU();
 	CPU.AC = intToWord(5, &CPU.PSW);
-	operand = intToWord(5, &CPU.PSW);
+	CPU.IR = 8100005; // COMP Immediate 5
+	instruction = decode();
 
-	executeComparison(operand);
+	executeComparison(instruction);
 	ASSERT_EQ(5, wordToInt(CPU.AC)); // 5 - 5
 	ASSERT_EQ((unsigned)CC_ZERO, CPU.PSW.conditionCode);
 
 	// Minor Than (10 < 20)
 	setupCleanCPU();
 	CPU.AC = intToWord(10, &CPU.PSW);
-	operand = intToWord(20, &CPU.PSW);
+	CPU.IR = 8100020; // COMP Immediate 20
+	instruction = decode();
 
-	executeComparison(operand); // 10 - 20
+	executeComparison(instruction); // 10 - 20
 	ASSERT_EQ((unsigned)CC_NEG, CPU.PSW.conditionCode);
 
 	// Greater Than (20 > 10)
 	setupCleanCPU();
 	CPU.AC = intToWord(20, &CPU.PSW);
-	operand = intToWord(10, &CPU.PSW);
+	CPU.IR = 8100010; // COMP Immediate 10
+	instruction = decode();
 
-	executeComparison(operand); // 20 - 10
+	executeComparison(instruction); // 20 - 10
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 
 	// Algebraic Comparison Using Sign-Magnitude (-5 > -10)
 	setupCleanCPU();
 	CPU.AC = intToWord(-5, &CPU.PSW);
-	operand = intToWord(-10, &CPU.PSW);
+	writeMemory(300, intToWord(-10, &CPU.PSW));
+	CPU.IR = 8000300; // COMP Direct RAM[300] = -10
+	instruction = decode();
 
-	executeComparison(operand); // -5 - (-10)
+	executeComparison(instruction); // -5 - (-10)
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 
 	// Overflow in Comparison
@@ -755,9 +754,11 @@ UTEST(CPU_ALU, CompareInstruction) {
 	// Subtraction: 6M - (-5M) = 11,000,000 (Exceeds MAX_MAGNITUDE 9,999,999)
 	setupCleanCPU();
 	CPU.AC = intToWord(6000000, &CPU.PSW);
-	operand = intToWord(-5000000, &CPU.PSW);
+	writeMemory(300, intToWord(-5000000, &CPU.PSW));
+	CPU.IR = 8000300; // COMP Direct RAM[300] = -5,000,000
+	instruction = decode();
 
-	executeComparison(operand); // The CPU must detect overflow here
+	executeComparison(instruction); // The CPU must detect overflow here
 	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
 	ASSERT_EQ(6000000, wordToInt(CPU.AC)); // AC remains unchanged
 }
