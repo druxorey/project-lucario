@@ -20,8 +20,8 @@
  * Used to indicate the result of internal CPU operations to the control loop.
  */
 typedef enum {
-	CPU_OK = 0,         /**< CPU operation successful; continue execution. */
-	CPU_HALT = 1,       /**< CPU has reached a halt instruction or condition. */
+	CPU_OK = 0,          /**< CPU operation successful */
+    CPU_STOP = 1,        /**< CPU has reached a stop condition */
 } CPUStatus_t;
 
 typedef enum {
