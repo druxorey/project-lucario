@@ -1,19 +1,14 @@
-#include <stdbool.h>
-#include <pthread.h>
-#include <string.h>
-
 #include "../lib/utest.h"
 #include "../inc/console.h"
 #include "../inc/loader.h"
-#include "../inc/cpu.h"
 #include "../inc/logger.h"
-
-CPU_t CPU;
-bool isDebugMode = false;
 
 static char spyLastFileName[CONSOLE_BUFFER_SIZE];
 static int spyCpuRunCallCount = 0;
 static int spyCpuStepCallCount = 0;
+
+// Mock for Cpu Initialization
+CPU_t CPU;
 
 // Mock for Loader
 ProgramInfo_t loadProgram(char* fileName) {
@@ -28,21 +23,40 @@ ProgramInfo_t loadProgram(char* fileName) {
     return programInfo;
 }
 
-// Mock for CPU Run (Normal Mode)
+// Mock for CPU Run
 int cpuRun(void) {
     spyCpuRunCallCount++;
-	return 1;
+	return 0;
 }
 
-// Mock for CPU Step (Debug Mode)
+// Mock for CPU Step
 bool cpuStep(void) {
     spyCpuStepCallCount++;
     return false;
 }
 
-// Mock for CPU Reset (Normal Mode)
+// Mock for CPU Reset
 void cpuReset(void) {
 	return;
+}
+
+int wordToInt(word w) {
+	return (IS_NEGATIVE(w))? -((int)GET_MAGNITUDE(w)): (int)GET_MAGNITUDE(w);
+}
+
+CommandStatus_t consoleProcessCommand(char* input) {
+	char command[CONSOLE_BUFFER_SIZE];
+	char argument[CONSOLE_BUFFER_SIZE];
+
+	CommandStatus_t parseStatus = parseInput(input, command, argument);
+	if (parseStatus == CMD_EMPTY) return CMD_EMPTY;
+
+	if (strcmp(command, "EXIT") == 0) return CMD_SUCCESS;
+	if (strcmp(command, "LOAD") == 0) return handleLoadCommand(argument);
+	if (strcmp(command, "RUN") == 0) return handleRunCommand();
+	if (strcmp(command, "DEBUG") == 0) return handleDebugCommand();
+
+	return CMD_UNKNOWN;
 }
 
 UTEST_MAIN();
@@ -53,7 +67,7 @@ UTEST(Console, LoadCommandReturnsCorrectCodes) {
     memset(spyLastFileName, 0, CONSOLE_BUFFER_SIZE);
 
     char input[CONSOLE_BUFFER_SIZE];
-    ConsoleStatus_t output;
+    CommandStatus_t output;
 
     strcpy(input, "LOAD program.txt\n");
     output = consoleProcessCommand(input);
@@ -79,7 +93,7 @@ UTEST(Console, RunCommandReturnsCorrectCode) {
     char input[CONSOLE_BUFFER_SIZE];
 
     strcpy(input, "RUN\n");
-    ConsoleStatus_t output = consoleProcessCommand(input);
+    CommandStatus_t output = consoleProcessCommand(input);
     ASSERT_EQ(output, (unsigned)CMD_SUCCESS);
 	loggerClose();
 }
@@ -90,8 +104,8 @@ UTEST(Console, ExitCommandReturnsCorrectCode) {
     char input[CONSOLE_BUFFER_SIZE];
 
     strcpy(input, "EXIT\n");
-    ConsoleStatus_t output = consoleProcessCommand(input);
-    ASSERT_EQ(output, (unsigned)CMD_EXIT);
+    CommandStatus_t output = consoleProcessCommand(input);
+    ASSERT_EQ(output, (unsigned)CMD_SUCCESS);
 	loggerClose();
 }
 
@@ -101,7 +115,7 @@ UTEST(Console, EmptyInputReturnsCorrectCode) {
     char input[CONSOLE_BUFFER_SIZE];
 
     strcpy(input, "\n");
-    ConsoleStatus_t output = consoleProcessCommand(input);
+    CommandStatus_t output = consoleProcessCommand(input);
     ASSERT_EQ(output, (unsigned)CMD_EMPTY);
 	loggerClose();
 }
@@ -112,7 +126,7 @@ UTEST(Console, UnknownCommandReturnsCorrectCode) {
     char input[CONSOLE_BUFFER_SIZE];
 
     strcpy(input, "INCORRECT_COMMAND\n");
-    ConsoleStatus_t output = consoleProcessCommand(input);
+    CommandStatus_t output = consoleProcessCommand(input);
     ASSERT_EQ(output, (unsigned)CMD_UNKNOWN);
 	loggerClose();
 }
@@ -147,13 +161,3 @@ UTEST(Console, CommandDebugTriggersCpuStep) {
     ASSERT_EQ(1, spyCpuStepCallCount);
 	loggerClose();
 }
-
-/*
-// Verify that the consoleStart function initializes the console correctly
-UTEST(Console, ConsoleInitialization) {
-	loggerInit();
-    int result = consoleStart();
-	ASSERT_EQ(0, result);
-	loggerClose();
-}
-*/

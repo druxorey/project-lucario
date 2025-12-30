@@ -5,37 +5,26 @@
  * Contains all shared data structures between the CPU, Memory, DMA,
  * and other subsystems, based on the 8-digit decimal architecture.
  *
- * @version 1.1
+ * @version 1.2
  */
 
 #ifndef DEFINITIONS_H
 #define DEFINITIONS_H
 
 #include <pthread.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
 
-/** @brief Main memory size in words. */
-#define RAM_SIZE 2000
-/** @brief Memory space reserved for the Operating System. */
-#define OS_RESERVED_SIZE 300
-/** @brief Virtual Hard Disk Geometry. */
-#define DISK_TRACKS 10
-#define DISK_CYLINDERS 10
-#define DISK_SECTORS 100
-/** @brief Logical sector size. It represents 9 logical characters. */
-#define SECTOR_SIZE 9
-/** @brief Maximum allowed magnitude (7 digits). */
-#define MAX_MAGNITUDE 9999999
-#define MIN_MAGNITUDE 0
-/** @brief Log buffer size for debug output. */
-#define LOG_BUFFER_SIZE 512
+#define RAM_SIZE         2000      /** Main memory size in words. */
+#define OS_RESERVED_SIZE 300       /** Memory space reserved for the Operating System. */
+#define DISK_TRACKS      10        /** Virtual Hard Disk geometry: number of tracks. */
+#define DISK_CYLINDERS   10        /** Virtual Hard Disk geometry: number of cylinders. */
+#define DISK_SECTORS     100       /** Virtual Hard Disk geometry: number of sectors. */
+#define SECTOR_SIZE      9         /** Logical sector size. It represents 9 logical characters. */
+#define MAX_MAGNITUDE    9999999   /** Maximum allowed magnitude (7 digits). */
+#define MIN_MAGNITUDE    0         /** Minimum allowed magnitude. */
+#define LOG_BUFFER_SIZE  512       /** Log buffer size for debug output. */
 
-/** @brief Represents an 8-decimal digit machine word. (SMMMMMMM S=Sign, M=Magnitude). */
-typedef int word;
-/** @brief Represents a memory address (index 0-1999). */
-typedef int address;
+typedef int word;                  /** Represents an 8-decimal digit machine word. (SMMMMMMM S=Sign, M=Magnitude). */
+typedef int address;               /** Represents a memory address (index 0-1999). */
 
 /**
  * @brief PSW Condition Codes.
@@ -180,36 +169,20 @@ typedef struct {
 	word data; /**< Stored data (9 logical chars / 1 integer) */
 } Sector_t;
 
-/** @brief Extracts the first 2 digits for OpCode. */
-#define GET_INSTRUCTION_OPCODE(w) ((w) / 1000000)
-/** @brief Extracts the 3rd digit for Addressing Mode. */
-#define GET_INSTRUCTION_MODE(w)   (((w) / 100000) % 10)
-/** @brief Extracts the last 5 digits as Value/Address. */
-#define GET_INSTRUCTION_VALUE(w)  ((w) % 100000)
-/** @brief Bit (digit) representing the negative sign (10000000). */
-#define SIGN_BIT 10000000
-/** @brief Checks if a word is negative (1xxxxxxx). */
-#define IS_NEGATIVE(w)            ((w) >= SIGN_BIT)
-/** @brief Gets only the magnitude (the lower 7 digits). */
-#define GET_MAGNITUDE(w)          ((w) % SIGN_BIT)
-/** @brief Maximum valid word value (19999999). */
-#define MAX_WORD_VALUE (SIGN_BIT + MAX_MAGNITUDE)
-/** @brief Validates if a word is within the allowed range. */
-#define IS_VALID_WORD(w)  ((w) >= 0 && (w) <= MAX_WORD_VALUE)
+#define GET_INSTRUCTION_OPCODE(w) ((w) / 1000000)                      /**< @brief Extracts the first 2 digits for OpCode. */
+#define GET_INSTRUCTION_MODE(w)   (((w) / 100000) % 10)                /**< @brief Extracts the 3rd digit for Addressing Mode. */
+#define GET_INSTRUCTION_VALUE(w)  ((w) % 100000)                       /**< @brief Extracts the last 5 digits as Value/Address. */
+#define SIGN_BIT                  10000000                             /**< @brief Bit (digit) representing the negative sign (10000000). */
+#define IS_NEGATIVE(w)            ((w) >= SIGN_BIT)                    /**< @brief Checks if a word is negative (1xxxxxxx). */
+#define GET_MAGNITUDE(w)          ((w) % SIGN_BIT)                     /**< @brief Gets only the magnitude (the lower 7 digits). */
+#define MAX_WORD_VALUE            (SIGN_BIT + MAX_MAGNITUDE)           /**< @brief Maximum valid word value (19999999). */
+#define IS_VALID_WORD(w)          ((w) >= 0 && (w) <= MAX_WORD_VALUE)  /**< @brief Validates if a word is within the allowed range. */
 
-/** @brief Shared Main Memory (RAM). */
-extern word RAM[RAM_SIZE];
-/** @brief Global Processor Instance. */
-extern CPU_t CPU;
-/** @brief Global DMA Instance. */
-extern DMA_t DMA;
-/** @brief Virtual Hard Disk. */
-extern Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];
-/** @brief Mutex for Memory Bus Arbitration. */
-extern pthread_mutex_t BUS_LOCK;
-/** @brief Condition variable to synchronize DMA start. */
-extern pthread_cond_t DMA_COND;
-/** @brief Flag indicating if the system is in debug mode. */
-extern bool isDebugMode;
+extern word RAM[RAM_SIZE];                                        /**< @brief Shared Main Memory (RAM). */
+extern CPU_t CPU;                                                 /**< @brief Global Processor Instance. */
+extern DMA_t DMA;                                                 /**< @brief Global DMA Instance. */
+extern Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];  /**< @brief Virtual Hard Disk. */
+extern pthread_mutex_t BUS_LOCK;                                  /**< @brief Mutex for Memory Bus Arbitration. */
+extern pthread_cond_t DMA_COND;                                   /**< @brief Condition variable to synchronize DMA start. */
 
 #endif // DEFINITIONS_H

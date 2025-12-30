@@ -1,5 +1,5 @@
-#include <stdbool.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <pthread.h>
 #include <time.h>
 #include <string.h>
@@ -8,7 +8,7 @@
 
 const char* LOG_FILE_NAME = "logs.txt";
 FILE* logFile = NULL;
-static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t LOG_LOCK = PTHREAD_MUTEX_INITIALIZER;
 
 static void getCurrentTimeString(char* buffer, size_t size) {
 	time_t now = time(NULL);
@@ -21,33 +21,28 @@ static void getCurrentTimeString(char* buffer, size_t size) {
 
 
 void loggerInit(void) {
-	pthread_mutex_lock(&log_mutex);
-	logFile = fopen(LOG_FILE_NAME, "w");
-	pthread_mutex_unlock(&log_mutex);
+	pthread_mutex_lock(&LOG_LOCK);
+	logFile = fopen(LOG_FILE_NAME, "a");
+	pthread_mutex_unlock(&LOG_LOCK);
 }
 
 
 void loggerClose(void) {
-	pthread_mutex_lock(&log_mutex);
+	pthread_mutex_lock(&LOG_LOCK);
 	if (logFile != NULL) {
 		fclose(logFile);
 		logFile = NULL;
 	}
-	pthread_mutex_unlock(&log_mutex);
+	pthread_mutex_unlock(&LOG_LOCK);
 }
 
 
 void loggerLog(LogLevel_t level, const char* message) {
-
-	if (level == LOG_DEBUG && isDebugMode == false) {
-		return;
-	}
-
-	pthread_mutex_lock(&log_mutex);
+	pthread_mutex_lock(&LOG_LOCK);
 	logFile = fopen(LOG_FILE_NAME, "a");
 	if (logFile != NULL) {
-		char timeBuf[32];
-		getCurrentTimeString(timeBuf, sizeof(timeBuf));
+		char timeBuffer[32];
+		getCurrentTimeString(timeBuffer, sizeof(timeBuffer));
 		char* prefix = ":";
 
 		switch (level) {
@@ -55,29 +50,26 @@ void loggerLog(LogLevel_t level, const char* message) {
 				prefix = ":";
 				break;
 			case LOG_WARNING:
-				prefix = " [WARN]:";
+				prefix = ": [WARN]";
 				break;
 			case LOG_ERROR:
-				prefix = " [ERROR]:";
-				break;
-			case LOG_DEBUG:
-				prefix = " [DEBUG]:";
+				prefix = ": [ERROR]";
 				break;
 		}
 
-		fprintf(logFile, "[%s]%s %s\n", timeBuf, prefix, message);
+		fprintf(logFile, "[%s]%s %s\n", timeBuffer, prefix, message);
 		fflush(logFile);
 		fclose(logFile);
 		logFile = NULL;
 	}
-	pthread_mutex_unlock(&log_mutex);
+	pthread_mutex_unlock(&LOG_LOCK);
 }
 
 
 void loggerLogInterrupt(InterruptCode_t code) {
 	const char *message = "Unknown interrupt code";
-	char timeBuf[32];
-	getCurrentTimeString(timeBuf, sizeof(timeBuf));
+	char timeBuffer[32];
+	getCurrentTimeString(timeBuffer, sizeof(timeBuffer));
 
 	switch (code) {
 		case IC_INVALID_SYSCALL: message = "Invalid system call interrupt"; break;
@@ -93,6 +85,6 @@ void loggerLogInterrupt(InterruptCode_t code) {
 	}
 
 	loggerLog(LOG_WARNING, message);
-	printf("[%s] %s[WARN]%s: %s\n", timeBuf, COLOR_WARNING, COLOR_RESET, message);
+	printf("[%s] \x1b[33m[WARN]\x1b[0m: %s\n", timeBuffer, message);
 	fflush(logFile);
 }

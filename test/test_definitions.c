@@ -1,7 +1,6 @@
+#include <stdbool.h>
 #include "../lib/utest.h"
 #include "../inc/definitions.h"
-
-bool isDebugMode = false;
 
 UTEST_MAIN();
 

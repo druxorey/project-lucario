@@ -1,31 +1,27 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdbool.h>
 
 #include "../inc/definitions.h"
 #include "../inc/logger.h"
 #include "../inc/memory.h"
 #include "../inc/console.h"
-#include "../inc/cpu.h"
 
-// Global debug flag definition 
-bool isDebugMode = false; 
+CPU_t CPU;
 
-int main(int argc, char* argv[]) {
-	#ifdef DEBUG
-	printf("Debug Mode\n");
-	#endif
-
-	// Boot Sequence
+int main() {
 	loggerInit();
 	memoryInit();
-	loggerLog(LOG_INFO, "System Boot sequence initiated.");
+	loggerLog(LOG_INFO, "System Boot sequence initiated");
 
-	// Shutdown Sequence
-	if(consoleStart() == 0) {
-		loggerLog(LOG_INFO, "System Shutdown completed successfully.");
-		loggerClose();
-		pthread_mutex_destroy(&BUS_LOCK);
+	ConsoleStatus_t consoleStatus = consoleStart();
+
+	if (consoleStatus == CONSOLE_SUCCESS) {
+		loggerLog(LOG_INFO, "System Shutdown completed successfully");
+	} else if (consoleStatus == CONSOLE_RUNTIME_ERROR) {
+		loggerLog(LOG_ERROR, "System Shutdown incorrectly");
 	}
+
+	loggerClose();
+	pthread_mutex_destroy(&BUS_LOCK);
 
 	return 0;
 }

@@ -1,5 +1,5 @@
-#include <stdbool.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <pthread.h>
 #include <string.h>
 #include <ctype.h>
@@ -9,7 +9,9 @@
 #include "../inc/logger.h"
 #include "../inc/cpu.h"
 
-char* trimWhitespace(char* string) {
+char logBuffer[LOG_BUFFER_SIZE];
+
+static char* trimWhitespace(char* string) {
 	char* source = string;
 	char* destiny = string;
 	int inWord = 0;
@@ -42,147 +44,208 @@ char* trimWhitespace(char* string) {
 }
 
 
-void splitInput(const char* input, char* command, char* argument) {
+static void printFullRegisters(void) {
+	printf("\n\x1b[1;33m================= CPU STATE =================\x1b[0m\n");
+	printf(" PC:     %05d | AC:  %08d (%d)\n", CPU.PSW.pc, CPU.AC, wordToInt(CPU.AC));
+	printf(" IR:  %08d | OP:  %02d | MD: %1d | VAL: %05d\n",
+	       CPU.IR,
+	       GET_INSTRUCTION_OPCODE(CPU.IR),
+	       GET_INSTRUCTION_MODE(CPU.IR),
+	       GET_INSTRUCTION_VALUE(CPU.IR));
+	printf(" MDR: %08d | MAR: %05d\n", CPU.MDR, CPU.MAR);
+	printf("---------------------------------------------\n");
+	printf(" RB:  %08d | RL:  %08d\n", CPU.RB, CPU.RL);
+	printf(" SP:  %08d | RX:  %08d\n", CPU.SP, CPU.RX);
+	printf(" Int: %s      | CC: %d | PSW Mode: %s\n",
+	       (CPU.PSW.interruptEnable) ? "ON " : "OFF",
+	       CPU.PSW.conditionCode,
+	       (CPU.PSW.mode == MODE_KERNEL) ? "KERNEL" : "USER");
+	printf("\x1b[1;33m=============================================\x1b[0m\n\n");
+}
+
+
+static void printCommandList(void) {
+	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m\n");
+	printf("  \x1b[1mRUN <file>\x1b[0m         : Execute program in Normal Mode\n");
+	printf("  \x1b[1mDEBUG <file>\x1b[0m       : Execute program in Debug Mode\n");
+	printf("  \x1b[1mEXIT\x1b[0m        : Shutdown the system\n");
+	printf("  \x1b[1mCOMANDS\x1b[0m     : Show this list\n\n");
+}
+
+
+CommandStatus_t parseInput(char* input, char* command, char* argument) {
 	command[0] = '\0';
 	argument[0] = '\0';
-
-	// %s reads one word (up to the first space)
-	// %[^\n] reads "everything up to the newline" (the rest of the string)
-	// The space between %s and %[^\n] consumes the separating space
-	sscanf(input, "%19s %99[^\n]", command, argument);
-
-	// sscanf returns how many variables it successfully filled
-	// If input is "RUN", matches will be 1 (argument remains empty due to the initial clearing)
-	// If input is "LOAD file", matches will be 2
-}
-
-
-int consoleStart(void) {
-	printf("\033[2J\033[H");
-	char buffer[CONSOLE_BUFFER_SIZE];
-	printf("=== LUCARIO REPL ===\n");
-	
-	while(true) {
-		printf("LUCARIO > ");
-		if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
-		
-		ConsoleStatus_t output = consoleProcessCommand(buffer);
-		#ifdef DEBUG
-		printf("\x1b[36mDEBUG: Command Output = [%d] \x1b[0m\n", output);
-		#endif
-		if (output == CMD_EXIT) break;
-	}
-
-	return 0;
-}
-
-
-ConsoleStatus_t consoleProcessCommand(char* input) {
-	char logBuffer[LOG_BUFFER_SIZE];
 	input[strcspn(input, "\n")] = 0;
 	input = trimWhitespace(input);
 
 	if (strlen(input) == 0) return CMD_EMPTY;
 
-	char command[CONSOLE_BUFFER_SIZE], argument[CONSOLE_BUFFER_SIZE];
-	splitInput(input, command, argument);
-
+	// %s reads one word (up to the first space)
+	// %[^\n] reads "everything up to the newline" (the rest of the string)
+	// The space between %s and %[^\n] consumes the separating space
+	sscanf(input, "%19s %99[^\n]", command, argument);
+	// sscanf returns how many variables it successfully filled
+	// If input is "EXIT", matches will be 1 (argument remains empty)
+	// If input is "RUN file" or "DEBUG file", matches will be 2
+	
 	#ifdef DEBUG
-	printf("\x1b[36mDEBUG: Command = [%s]; Argument = [%s] \x1b[0m\n", command, argument);
+	printf("\x1b[36m[DEBUG]: Parsed -> Command: [%s]; Argument: [%s] \x1b[0m\n", command, argument);
 	#endif
 
-	if (strcmp(command, "EXIT") == 0) {
-		loggerLog(LOG_INFO, "System shutdown requested via CLI (EXIT command).");
-		return CMD_EXIT;
+	return CMD_SUCCESS;
+}
+
+
+CommandStatus_t handleLoadCommand(char* argument) {
+	if (strlen(argument) == 0) {
+		printf("Error: Missing filename.\n");
+		loggerLog(LOG_WARNING, "User attempted to load program without filename argument");
+		return CMD_MISSING_ARGS;
 	}
 
-	if (strcmp(command, "LOAD") == 0) {
-		if (strlen(argument) == 0) {
-			printf("Error: Missing filename.\n");
-			loggerLog(LOG_WARNING, "User attempted LOAD command without filename argument.");
-			return CMD_MISSING_ARGS;
-		}
+	ProgramInfo_t info = loadProgram(argument);
 
-		ProgramInfo_t info = loadProgram(argument);
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Program load processed. Status = [%d]\x1b[0m\n", info.status);
+	#endif
 
-		if (info.status == LOAD_SUCCESS) {
-			printf("File '%s' loaded successfully.\n", argument);
-			snprintf(logBuffer, sizeof(logBuffer), "Program loaded: %s (Words: %d, Start: %d)", 
-							argument, info.wordCount, info._start);
-			loggerLog(LOG_INFO, logBuffer);
-			return CMD_SUCCESS;
+	if (info.status == LOAD_SUCCESS) {
+		printf("File '%s' loaded successfully.\n", argument);
+		snprintf(logBuffer, sizeof(logBuffer), "Program loaded: %s (Words: %d, Start: %d)", argument, info.wordCount, info._start);
+		loggerLog(LOG_INFO, logBuffer);
+		return CMD_SUCCESS;
+	}
+
+	printf("Error loading file.\n");
+	snprintf(logBuffer, sizeof(logBuffer), "Failed to load program file: %s", argument);
+	loggerLog(LOG_ERROR, logBuffer);
+	return CMD_LOAD_ERROR;
+}
+
+
+CommandStatus_t handleRunCommand(char* argument) {
+	cpuReset();
+
+	CommandStatus_t loadStatus = handleLoadCommand(argument);
+	if (loadStatus != CMD_SUCCESS) return loadStatus;
+	
+	printf("Executing in Normal Mode...\n");
+	loggerLog(LOG_INFO, "Starting execution in Normal Mode");
+
+	if (cpuRun() == 0) {
+		printf("Execution finished.\n");
+		loggerLog(LOG_INFO, "Normal Mode execution finished successfully");
+		return CMD_SUCCESS;
+	}
+
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: RUN execution terminated abnormally.\x1b[0m\n");
+	#endif
+	
+	loggerLog(LOG_ERROR, "Normal Mode execution terminated abnormally");
+	return CMD_RUNTIME_ERROR;
+}
+
+
+CommandStatus_t handleDebugCommand(char* argument) {
+	cpuReset();
+
+	CommandStatus_t loadStatus = handleLoadCommand(argument);
+	if (loadStatus != CMD_SUCCESS) return loadStatus;
+
+	printf("Executing in Debug Mode...\n");
+	loggerLog(LOG_INFO, "Starting execution in Debug Mode.");
+
+	char debugBuf[CONSOLE_BUFFER_SIZE];
+	bool isRunning = true;
+	
+	printf("\n\x1b[32mDEBUGGER COMMANDS:\x1b[0m\n");
+	printf("  \x1b[1mSTEP\x1b[0m (or ENTER) : Execute next instruction.\n");
+	printf("  \x1b[1mREGS\x1b[0m            : View all registers detailed.\n");
+	printf("  \x1b[1mQUIT\x1b[0m            : Exit debugger (stops execution).\n");
+
+	printFullRegisters();
+
+	while (isRunning) {
+		printf("\x1b[32mDEBUG > \x1b[0m");
+		
+		if (fgets(debugBuf, sizeof(debugBuf), stdin) == NULL) break;
+		
+		debugBuf[strcspn(debugBuf, "\n")] = 0;
+		char* cmd = trimWhitespace(debugBuf);
+
+		if (strlen(cmd) == 0 || strcmp(cmd, "STEP") == 0) {
+			int currentPC = CPU.PSW.pc;
+			bool active = cpuStep();
+
+			printf(" -> Executed Addr: \x1b[33m%03d\x1b[0m | Instr: \x1b[33m%08d\x1b[0m | Result AC: \x1b[33m%08d\x1b[0m\n", currentPC, CPU.IR, CPU.AC);
+
+			if (!active) {
+				printf("\x1b[31mPROGRAM HALTED\x1b[0m\n");
+				loggerLog(LOG_INFO, "Debug Mode session finished (CPU Halted).");
+				return CMD_SUCCESS;
+			}
+		} else if (strcmp(cmd, "REGS") == 0) {
+			printFullRegisters();
+		} else if (strcmp(cmd, "QUIT") == 0) {
+			printf("Exiting debugger...\n");
+			loggerLog(LOG_INFO, "Debug Mode session aborted by user.");
+			isRunning = false;
 		} else {
-			printf("Error loading file.\n");
-			snprintf(logBuffer, sizeof(logBuffer), "Failed to load program file: %s", argument);
-			loggerLog(LOG_ERROR, logBuffer);
-			return CMD_LOAD_ERROR;
+			printf("Unknown debug command. Use: STEP, REGS, QUIT.\n");
 		}
 	}
-
-	if (strcmp(command, "RUN") == 0) {
-		printf("Executing in Normal Mode...\n");
-		loggerLog(LOG_INFO, "Starting execution in Normal Mode.");
-
-		isDebugMode = false;
-		if (cpuRun()) {
-			printf("Execution finished.\n");
-			loggerLog(LOG_INFO, "Normal Mode execution finished successfully.");
-			return CMD_SUCCESS;
-		}
-		
-		loggerLog(LOG_ERROR, "Normal Mode execution terminated abnormally.");
-		return CMD_RUNTIME_ERROR;
-	}
-
-	if (strcmp(command, "DEBUG") == 0) {
-		printf("Executing in Debug Mode...\n");
-		loggerLog(LOG_INFO, "Starting execution in Debug Mode.");
-
-		isDebugMode = true;
-		if (runDebugMode()) {
-			isDebugMode = false;
-			printf("Execution finished.\n");
-			loggerLog(LOG_INFO, "Debug Mode session finished.");
-			return CMD_SUCCESS;
-		}
-		isDebugMode = false;
-		
-		loggerLog(LOG_ERROR, "Debug Mode execution terminated abnormally.");
-		return CMD_RUNTIME_ERROR;
-	}
-
-	printf("Unknown command: %s\n", input);
-	snprintf(logBuffer, sizeof(logBuffer), "Unknown command received: %s", command);
-	loggerLog(LOG_WARNING, logBuffer);
 	
-	return CMD_UNKNOWN;
+	return CMD_SUCCESS;
 }
 
 
-void printCpuState() {
-	printf("[DEBUG] PC:%03d | IR:%08d | AC:%08d\n", CPU.PSW.pc, CPU.IR, CPU.AC);
-}
-
-
-int runDebugMode() {
-	printf("--- DEBUG MODE STARTED ---\n");
-	printf("Press [ENTER] to step, 'q' to quit debug mode.\n");
+ConsoleStatus_t consoleStart(void) {
+	char buffer[CONSOLE_BUFFER_SIZE];
+	char command[CONSOLE_BUFFER_SIZE];
+	char argument[CONSOLE_BUFFER_SIZE];
 	
-	char debugBuf[10];
+	printf("\x1b[2J\x1b[H\n");
+
+	printf("  █     █  █  █▀▀▀  █▀▀█  █▀▀█  ▀█▀  █▀▀█     █▀▀█ █▀▀▀  █▀▀█   █   \n");
+	printf("  █     █  █  █     █▀▀█  █▀▀▄   █   █  █     █▀▀▄ █▀▀▀  █▀▀▀   █   \n");
+	printf("  █     █  █  █     █  █  █  █   █   █  █     █  █ █     █      █   \n");
+	printf("  ▀▀▀▀  ▀▀▀▀  ▀▀▀▀  ▀  ▀  ▀  ▀  ▀▀▀  ▀▀▀▀     ▀  ▀ ▀▀▀▀  ▀      ▀▀▀▀\n");
+
+	printCommandList();
 	
-	while(isDebugMode) {
-		printCpuState();
-		bool active = cpuStep();
+	while(true) {
+		printf("\x1b[35mLUCARIO\x1b[0m > ");
+		if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
 		
-		if (!active) {
-			printf("--- PROGRAM FINISHED (HALT) ---\n");
-			break;
-		}
+		CommandStatus_t output = CMD_SUCCESS;
+		CommandStatus_t parseStatus = parseInput(buffer, command, argument);
 
-		printf(">> ");
-		if (fgets(debugBuf, sizeof(debugBuf), stdin) != NULL) {
-			if (debugBuf[0] == 'q') break;
+		if (parseStatus == CMD_EMPTY) continue;
+
+		if (strcmp(command, "EXIT") == 0) {
+			loggerLog(LOG_INFO, "System shutdown requested via CLI (EXIT command)");
+			return CONSOLE_SUCCESS;
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: EXIT command received. Shutting down console.\x1b[0m\n");
+			#endif
+		} else if (strcmp(command, "RUN") == 0) {
+			output = handleRunCommand(argument);
+		} else if (strcmp(command, "DEBUG") == 0) {
+			output = handleDebugCommand(argument);
+		} else if (strcmp(command, "COMANDS") == 0) {
+			printCommandList();
+		} else {
+			printf("Unknown command: %s\n", command);
+			snprintf(logBuffer, sizeof(logBuffer), "Unknown command received: %s", command);
+			loggerLog(LOG_WARNING, logBuffer);
+			output = CMD_UNKNOWN;
 		}
+		#ifdef DEBUG
+		printf("\x1b[36m[DEBUG]: Command Output = [%d] \x1b[0m\n", output);
+		#endif
 	}
-	return 0;
+
+	return CONSOLE_RUNTIME_ERROR;
 }

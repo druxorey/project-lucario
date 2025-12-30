@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "../inc/loader.h"
@@ -65,7 +66,7 @@ ProgramInfo_t loadProgram(char* filePath) {
 
 		CPU.RB = OS_RESERVED_SIZE;
 		CPU.RL = OS_RESERVED_SIZE + programInfo.wordCount;
-		CPU.PSW.pc = OS_RESERVED_SIZE + programInfo._start - 1;
+		CPU.PSW.pc = programInfo._start - 1;
 
 		snprintf(logBuffer, sizeof(logBuffer), "Loader: Context Set - RB: %d | RL: %d | PC: %d", CPU.RB, CPU.RL, CPU.PSW.pc);
 		loggerLog(LOG_INFO, logBuffer);

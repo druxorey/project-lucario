@@ -2,11 +2,11 @@
  * @file console.h
  * @brief Command Line Interface (CLI) module for the Virtual Machine.
  *
- * This file defines the functions and structures responsible for handling
- * user interaction, parsing commands (LOAD, RUN, DEBUG), and managing
- * the execution modes (Normal vs. Debugger).
+ * This file defines the entry point for user interaction. It handles the
+ * REPL (Read-Eval-Print Loop), parses commands (LOAD, RUN, DEBUG, EXIT),
+ * and manages the system execution modes.
  *
- * @version 1.0
+ * @version 1.3
  */
 
 #ifndef CONSOLE_H
@@ -19,57 +19,83 @@
 #define CONSOLE_BUFFER_SIZE 512
 
 /**
- * @brief Console Status Codes.
- * Used to indicate the result of a processed command to the main loop.
+ * @brief Command Execution Status Codes.
+ * Internal status codes used by the command handlers to indicate the result
+ * of a specific operation (DEBUG, RUN, etc.) to the main loop.
  */
 typedef enum {
 	CMD_SUCCESS       = 0,  /**< Command executed successfully. The loop continues. */
-	CMD_EXIT          = 1,  /**< User requested to exit (EXIT command). Break the loop. */
-	CMD_EMPTY         = 2,  /**< Input was empty (User just pressed Enter). */
-	CMD_UNKNOWN       = 3,  /**< The entered command is not recognized. */
-	CMD_MISSING_ARGS  = 4,  /**< Command exists (e.g., LOAD) but required argument is missing. */
-	CMD_LOAD_ERROR    = 5,  /**< Loader failed to open or parse the specified file. */
-	CMD_RUNTIME_ERROR = 6   /**< Generic error during execution (CPU/Memory fault). */
+	CMD_EMPTY         = 1,  /**< Input was empty (User just pressed Enter). */
+	CMD_UNKNOWN       = 2,  /**< The entered command is not recognized. */
+	CMD_MISSING_ARGS  = 3,  /**< Command exists (e.g., RUN) but required argument is missing. */
+	CMD_LOAD_ERROR    = 4,  /**< Loader failed to open or parse the specified file. */
+	CMD_RUNTIME_ERROR = 5   /**< Generic error during execution (CPU/Memory fault). */
+} CommandStatus_t;
+
+/**
+ * @brief Console System Status Codes.
+ * Return codes for the main console application loop.
+ */
+typedef enum {
+	CONSOLE_SUCCESS       = 0, /**< The console session ended normally (User typed EXIT). */
+	CONSOLE_RUNTIME_ERROR = 1  /**< The console session ended due to a critical system error. */
 } ConsoleStatus_t;
 
 /**
- * @brief Starts the main Console loop.
+ * @brief Starts the main Console loop (REPL).
  *
- * Initializes the CLI, displays the prompt, and continuously waits for
- * user input until the EXIT command is issued.
+ * This is the main entry point for the UI. It initializes the interface,
+ * displays the prompt, reads user input, and dispatches commands to the
+ * appropriate internal handlers until the session is terminated.
  *
- * @return 0 on normal termination, non-zero on error.
+ * @return ConsoleStatus_t CONSOLE_SUCCESS on normal exit, or CONSOLE_RUNTIME_ERROR on failure.
  */
-int consoleStart(void);
+ConsoleStatus_t consoleStart(void);
 
 /**
- * @brief Processes a single line of input from the user.
+ * @brief Parses and tokenizes the raw user input.
  *
- * Parses the raw input string, identifies the command (LOAD, RUN, DEBUG, EXIT),
- * and dispatches the execution to the corresponding subsystem.
+ * Cleans the input string (trims whitespace) and splits it into the command
+ * and its argument.
  *
- * @param input The raw string entered by the user (modifiable).
- * @return A ConsoleStatus_t code indicating the outcome of the operation.
+ * @param input The raw input buffer from stdin (modified in place).
+ * @param command Buffer to store the extracted command (e.g., "RUN").
+ * @param argument Buffer to store the extracted argument (e.g., "file.txt").
+ * @return CommandStatus_t CMD_SUCCESS if parsed, CMD_EMPTY if input was blank.
  */
-ConsoleStatus_t consoleProcessCommand(char *input);
+CommandStatus_t parseInput(char* input, char* command, char* argument);
 
 /**
- * @brief Enters the interactive Debug Mode.
+ * @brief Handles the program loading logic.
  *
- * Executes the program currently in memory step-by-step. It pauses after
- * each instruction to display the CPU state and waits for user confirmation.
+ * Validates the filename argument and invokes the Loader subsystem to
+ * inject the program into memory. Logs the operation result.
  *
- * @return 0 on successful completion, non-zero if interrupted or on error.
+ * @param argument The filename string provided by the user.
+ * @return CommandStatus_t CMD_SUCCESS, CMD_MISSING_ARGS, or CMD_LOAD_ERROR.
  */
-int runDebugMode(void);
+CommandStatus_t handleLoadCommand(char* argument);
 
 /**
- * @brief Prints the current state of the CPU registers.
+ * @brief Handles the 'RUN' command logic.
  *
- * Displays the values of the Program Counter (PC), Accumulator (AC),
- * Instruction Register (IR), and other relevant flags. Used primarily
- * in Debug Mode.
+ * Initiates the CPU execution in Normal Mode (continuous execution).
+ * Logs the start and end of the execution.
+ *
+ * @param argument The filename string provided by the user.
+ * @return CommandStatus_t CMD_SUCCESS if execution finished normally, or CMD_RUNTIME_ERROR.
  */
-void printCpuState(void);
+CommandStatus_t handleRunCommand(char* argument);
+
+/**
+ * @brief Handles the 'DEBUG' command logic.
+ *
+ * Starts an interactive Debug Mode session where the user can step through
+ * instructions and inspect registers. Manages its own internal command loop.
+ *
+ * @param argument The filename string provided by the user.
+ * @return CommandStatus_t CMD_SUCCESS upon completion of the debug session.
+ */
+CommandStatus_t handleDebugCommand(char* argument);
 
 #endif // CONSOLE_H

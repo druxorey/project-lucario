@@ -1,11 +1,6 @@
 #include <stdbool.h>
-#include <pthread.h>
-#include <string.h>
-
 #include "../lib/utest.h"
 #include "../inc/logger.h"
-
-bool isDebugMode = false;
 
 UTEST_MAIN();
 
@@ -43,7 +38,7 @@ UTEST(Logger, LogFileUpdate) {
 	char buffer[100];
 	bool found = false;
 	while (fgets(buffer, 100, f)) {
-		if (strstr(buffer, "] [ERROR]: Writing test log entry")) {
+		if (strstr(buffer, ": [ERROR] Writing test log entry")) {
 			found = true;
 			break;
 		}
@@ -66,39 +61,13 @@ UTEST(Logger, InterruptLogFormat) {
 	char buffer[256];
 	bool found = false;
 	while (fgets(buffer, (int)sizeof(buffer), f)) {
-		if (strstr(buffer, "] [WARN]: Arithmetic overflow interrupt") != NULL) {
+		if (strstr(buffer, ": [WARN] Arithmetic overflow interrupt") != NULL) {
 			found = true;
 			break;
 		}
 	}
 	fclose(f);
 	ASSERT_TRUE(found);
-}
-
-// Verify that debug messages are filtered based on debug mode
-UTEST(Logger, DebugFiltering) {
-	loggerInit();
-
-	isDebugMode = true;
-	
-	loggerLog(LOG_DEBUG, "Secret Debug Message 1");
-	loggerLog(LOG_INFO, "Message 2");
-	loggerLog(LOG_DEBUG, "Secret Debug Message 3");
-	
-	FILE *f = fopen("logs.txt", "r");
-	ASSERT_TRUE(f != NULL);
-	
-	char buffer[256];
-	int count = 0;
-	while (fgets(buffer, sizeof(buffer), f)) {
-		if (strstr(buffer, "Secret Debug Message")) {
-			count++;
-		}
-	}
-	fclose(f);
-
-	// Only the second message should be logged
-	ASSERT_EQ(2, count);
 }
 
 // Verify thread-safety of the logger

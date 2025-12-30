@@ -1,5 +1,5 @@
+#include <stdio.h>
 #include <stdbool.h>
-#include <pthread.h>
 
 #include "../inc/logger.h"
 #include "../inc/cpu.h"
@@ -8,7 +8,6 @@
 static bool interruptPending = false;
 static InterruptCode_t pendingInterruptCode = 0;
 
-// Helper macro to update flags based on AC value (DRY principle)
 static void updatePSWFlags(void) {
 	if (CPU.AC == 0) CPU.PSW.conditionCode = CC_ZERO;
 	else if (IS_NEGATIVE(CPU.AC)) CPU.PSW.conditionCode = CC_NEG;
@@ -16,9 +15,7 @@ static void updatePSWFlags(void) {
 }
 
 static CPUStatus_t checkStatus(InstructionStatus_t status) {
-	if (status == INSTR_EXEC_FAIL) {
-		return CPU_STOP;
-	}
+	if (status == INSTR_EXEC_FAIL) return CPU_STOP;
 	return CPU_OK;
 }
 
@@ -258,18 +255,48 @@ InstructionStatus_t executeComparison(Instruction_t instruction) {
 
 	return INSTR_EXEC_SUCCESS;
 }
-  
+
+
+CPUStatus_t executeSystemCall(void) {
+	int syscallCode = wordToInt(CPU.AC);
+	// Temporary convention for Sprint 2:
+	// CPU_STOP = EXIT (End execution) (We will have to create a Enum later)
+	// Others = Simulate an operation (e.g. Print) and continue
+	if (syscallCode == 0) {
+		printf("SYSTEM CALL [0]: Program requested termination (EXIT).\n");
+		return CPU_STOP; // This will stop cpuRun()
+	} else {
+		// Any other code is considered a service request that does NOT stop the CPU
+		printf("SYSTEM CALL [%d]: Service handled (Simulation).\n", syscallCode);
+		// In the future an interrupt will be generated here, but the CPU does NOT stop,
+		// it simply continues to the next instruction after being serviced.
+		return CPU_OK;
+	}
+}
+
 
 CPUStatus_t fetch(void) {
 	CPU.MAR = CPU.PSW.pc;
+
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Fetching instruction from address %03d\x1b[0m\n", CPU.MAR);
+	#endif
+
 	if (readMemory(CPU.MAR, &CPU.MDR) != MEM_SUCCESS) {
 		loggerLogInterrupt(IC_INVALID_ADDR);
 		return CPU_STOP;
 	}
 	CPU.IR = CPU.MDR;
 	CPU.PSW.pc += 1;
+
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Fetched instruction %08d from address %03d\x1b[0m\n", CPU.IR, CPU.MAR);
+	printf("\x1b[36m[DEBUG]: Updated PC to %03d\x1b[0m\n", CPU.PSW.pc);
+	#endif
+
 	return CPU_OK;
 }
+
 
 Instruction_t decode(void) {
 	Instruction_t inst;
@@ -278,6 +305,7 @@ Instruction_t decode(void) {
 	inst.value = GET_INSTRUCTION_VALUE(CPU.IR);
 	return inst;
 }
+
 
 CPUStatus_t execute(Instruction_t instruction) {
 	InstructionStatus_t status = INSTR_EXEC_SUCCESS;
@@ -304,8 +332,7 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeBranching(instruction);
 			return checkStatus(status);
 		case OP_SVC:
-			// Implementation
-			return checkStatus(status);
+			return executeSystemCall();
 		case OP_RETRN:
 			// Implementation
 			return checkStatus(status);
@@ -362,16 +389,33 @@ CPUStatus_t execute(Instruction_t instruction) {
 	}
 }
 
+
 bool cpuStep(void) {
-	if (fetch()) {
-		return false;
-	}
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Starting CPU step at PC:%03d\x1b[0m\n", CPU.PSW.pc);
+	#endif
+
+	if (fetch()) return false;
+
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Fetched instruction %08d into IR\x1b[0m\n", CPU.IR);
+	#endif
+	
 	Instruction_t inst = decode();
-	if (execute(inst)) {
-		return false;
-	}
+
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Decoded instruction - Opcode: %02d, Mode: %01d, Value: %04d\x1b[0m\n", inst.opCode, inst.direction, inst.value);
+	#endif
+
+	if (execute(inst)) return false;
+
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Completed CPU step. PC is now at %03d\x1b[0m\n", CPU.PSW.pc);
+	#endif
+
 	return true;
 }
+
 
 int cpuRun(void) {
 	while (true) {
@@ -381,6 +425,7 @@ int cpuRun(void) {
 	}
 	return 0;
 }
+
 
 void cpuReset(void) {
 	CPU = (CPU_t){0};

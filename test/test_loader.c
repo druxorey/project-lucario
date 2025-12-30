@@ -1,10 +1,10 @@
+#include <stdbool.h>
 #include "../lib/utest.h"
 #include "../inc/loader.h"
 #include "../inc/memory.h"
 
 CPU_t CPU;
 word RAM[RAM_SIZE];
-bool isDebugMode = false;
 
 UTEST_MAIN();
 

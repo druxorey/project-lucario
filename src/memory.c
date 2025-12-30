@@ -1,49 +1,40 @@
-#include <pthread.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdbool.h>
+#include <pthread.h>
 
 #include "../inc/memory.h"
 #include "../inc/logger.h"
 
-// Physical memory storage
 word RAM[RAM_SIZE];
-
-// Mutex for Bus arbitration
 pthread_mutex_t BUS_LOCK;
 
 void memoryInit(void) {
 	pthread_mutex_init(&BUS_LOCK, NULL);
-	loggerLog(LOG_INFO, "Memory Subsystem Initialized.");
+	loggerLog(LOG_INFO, "Memory Subsystem Initialized");
 }
+
 
 static bool isPhysicalAddressValid(int physAddr) {
 	// Prevents buffer overflow on the actual C array
 	return (physAddr >= 0 && physAddr < RAM_SIZE);
 }
 
+
 static bool isProtectionViolation(int physAddr) {
 	// Kernel Mode bypasses memory protection (God Mode)
-	if (CPU.PSW.mode == MODE_KERNEL) {
-		return false;
-	}
-
+	if (CPU.PSW.mode == MODE_KERNEL) return false;
 	// User Mode must stay within its assigned partition [RB, RL]
-	if (physAddr < CPU.RB || physAddr > CPU.RL) {
-		return true;
-	}
-
+	if (physAddr < CPU.RB || physAddr > CPU.RL) return true;
 	return false;
 }
+
 
 static int getPhysicalAddress(address logicalAddr, MemoryStatus_t* status) {
 	int physAddr;
 
 	// Translate: Absolute addressing for Kernel, Relative for User
-	if (CPU.PSW.mode == MODE_KERNEL) {
-		physAddr = logicalAddr;
-	} else {
-		physAddr = logicalAddr + CPU.RB;
-	}
+	if (CPU.PSW.mode == MODE_KERNEL) physAddr = logicalAddr;
+	else physAddr = logicalAddr + CPU.RB;
 
 	if (isProtectionViolation(physAddr)) {
 		*status = MEM_ERR_PROTECTION;
@@ -72,17 +63,22 @@ MemoryStatus_t readMemory(address logicalAddr, word* outData) {
 		pthread_mutex_unlock(&BUS_LOCK);
 		
 		if (status == MEM_ERR_PROTECTION) {
-			loggerLog(LOG_ERROR, "Segmentation Fault: Read Access Violation.");
+			loggerLog(LOG_ERROR, "Segmentation Fault (READ):");
+			snprintf(logBuffer, sizeof(logBuffer), "Access Violation at LogicAddr [%d]. Limits [RB:%d, RL:%d]", logicalAddr, CPU.RB, CPU.RL);
+			loggerLog(LOG_ERROR, logBuffer);
 		} else {
-			loggerLog(LOG_ERROR, "Bus Error: Physical Address Out of Bounds.");
+			loggerLog(LOG_ERROR, "Bus Error (READ): ");
+			snprintf(logBuffer, sizeof(logBuffer), "Physical Address translation failed for LogicAddr [%d]", logicalAddr);
+			loggerLog(LOG_ERROR, logBuffer);
 		}
 		return status;
 	}
 
 	*outData = RAM[physAddr];
 
-	snprintf(logBuffer, sizeof(logBuffer), "Mem READ: Logic[%d] -> Phys[%d] = Val[%d]", logicalAddr, physAddr, *outData);
-	loggerLog(LOG_DEBUG, logBuffer);
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Mem READ: Logic[%d] -> Phys[%d] = Val[%d]\x1b[0m\n", logicalAddr, physAddr, *outData);
+	#endif
 
 	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_SUCCESS;
@@ -97,7 +93,9 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 	// Validate data structure (Sign bit + 7 magnitude digits)
 	if (!IS_VALID_WORD(data)) {
 		pthread_mutex_unlock(&BUS_LOCK);
-		loggerLog(LOG_ERROR, "Memory Error: Invalid word format (sign or magnitude).");
+		loggerLog(LOG_ERROR, "Memory Data Error: ");
+		snprintf(logBuffer, sizeof(logBuffer), "Attempted to write invalid word [%d]. Max magnitude is 7 digits.", data);
+		loggerLog(LOG_ERROR, logBuffer);
 		return MEM_ERR_INVALID_DATA;
 	}
 
@@ -108,17 +106,22 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 		pthread_mutex_unlock(&BUS_LOCK);
 		
 		if (status == MEM_ERR_PROTECTION) {
-			loggerLog(LOG_ERROR, "Segmentation Fault: Write Access Violation.");
+		loggerLog(LOG_ERROR, "Segmentation Fault (WRITE): ");
+			snprintf(logBuffer, sizeof(logBuffer), "Access Violation at LogicAddr [%d]. Limits [RB:%d, RL:%d]", logicalAddr, CPU.RB, CPU.RL);
+			loggerLog(LOG_ERROR, logBuffer);
 		} else {
-			loggerLog(LOG_ERROR, "Bus Error: Physical Address Out of Bounds.");
+		loggerLog(LOG_ERROR, "Bus Error (WRITE): ");
+			snprintf(logBuffer, sizeof(logBuffer), "Physical Address translation failed for LogicAddr [%d]", logicalAddr);
+			loggerLog(LOG_ERROR, logBuffer);
 		}
 		return status;
 	}
 
 	RAM[physAddr] = data;
 
-	snprintf(logBuffer, sizeof(logBuffer), "Mem WRITE: Logic[%d] -> Phys[%d] = Val[%d]", logicalAddr, physAddr, data);
-	loggerLog(LOG_DEBUG, logBuffer);
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Mem WRITE: Logic[%d] -> Phys[%d] = Val[%d]\x1b[0m\n", logicalAddr, physAddr, data);
+	#endif
 
 	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_SUCCESS;
