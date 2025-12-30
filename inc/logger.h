@@ -21,7 +21,6 @@ typedef enum {
 	LOG_INFO    = 0, /**< Standard informational message */
 	LOG_WARNING = 1, /**< Warning conditions */
 	LOG_ERROR   = 2, /**< Critical errors */
-	LOG_DEBUG   = 3, /**< Detailed debug information */
 } LogLevel_t;
 
 /**

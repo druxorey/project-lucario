@@ -61,7 +61,7 @@ static CommandStatus_t parseInput(char* input, char* command, char* argument) {
 	// If input is "LOAD file", matches will be 2
 	
 	#ifdef DEBUG
-	printf("\x1b[36mDEBUG: Parsed -> Command: [%s]; Argument: [%s] \x1b[0m\n", command, argument);
+	printf("\x1b[36m[DEBUG]: Parsed -> Command: [%s]; Argument: [%s] \x1b[0m\n", command, argument);
 	#endif
 
 	return CMD_SUCCESS;
@@ -78,7 +78,7 @@ static CommandStatus_t handleLoadCommand(char* argument) {
 	ProgramInfo_t info = loadProgram(argument);
 
 	#ifdef DEBUG
-	printf("\x1b[36mDEBUG: LOAD processed. Status = [%d]\x1b[0m\n", info.status);
+	printf("\x1b[36m[DEBUG]: LOAD processed. Status = [%d]\x1b[0m\n", info.status);
 	#endif
 
 	if (info.status == LOAD_SUCCESS) {
@@ -100,10 +100,9 @@ static CommandStatus_t handleRunCommand(void) {
 	loggerLog(LOG_INFO, "Starting execution in Normal Mode");
 
 	#ifdef DEBUG
-	printf("\x1b[36mDEBUG: RUN received. Starting CPU execution.\x1b[0m\n");
+	printf("\x1b[36m[DEBUG]: RUN received. Starting CPU execution.\x1b[0m\n");
 	#endif
 
-	isDebugMode = false;
 	if (cpuRun() == 0) { // Asumiendo que cpuRun retorna 0 en éxito
 		printf("Execution finished.\n");
 		loggerLog(LOG_INFO, "Normal Mode execution finished successfully");
@@ -111,7 +110,7 @@ static CommandStatus_t handleRunCommand(void) {
 	}
 
 	#ifdef DEBUG
-	printf("\x1b[36mDEBUG: RUN execution terminated abnormally.\x1b[0m\n");
+	printf("\x1b[36m[DEBUG]: RUN execution terminated abnormally.\x1b[0m\n");
 	#endif
 	
 	loggerLog(LOG_ERROR, "Normal Mode execution terminated abnormally");
@@ -124,25 +123,21 @@ static CommandStatus_t handleDebugCommand(void) {
 	loggerLog(LOG_INFO, "Starting execution in Debug Mode");
 
 	#ifdef DEBUG
-	printf("\x1b[36mDEBUG: DEBUG received. Starting Debug Mode execution.\x1b[0m\n");
+	printf("\x1b[36m[DEBUG]: DEBUG received. Starting Debug Mode execution.\x1b[0m\n");
 	#endif
 
 	char debugBuf[10];
-	isDebugMode = true;
 
 	printf("--- DEBUG MODE STARTED ---\n");
 	printf("Press [ENTER] to step, 'q' to quit debug mode.\n");
 
-	while(isDebugMode) {
-		// Mostrar estado actual
+	while(true) {
 		printf("[DEBUG] PC:%03d | IR:%08d | AC:%08d\n", CPU.PSW.pc, CPU.IR, CPU.AC);
 		
-		// Ejecutar un paso
 		bool active = cpuStep();
 		
 		if (!active) {
 			printf("--- PROGRAM FINISHED (HALT) ---\n");
-			isDebugMode = false;
 			loggerLog(LOG_INFO, "Debug Mode session finished (Program End)");
 			return CMD_SUCCESS;
 		}
@@ -150,7 +145,6 @@ static CommandStatus_t handleDebugCommand(void) {
 		printf(">> ");
 		if (fgets(debugBuf, sizeof(debugBuf), stdin) != NULL) {
 			if (debugBuf[0] == 'q') {
-				isDebugMode = false;
 				loggerLog(LOG_INFO, "Debug Mode session aborted by user");
 				return CMD_SUCCESS;
 			}
@@ -182,7 +176,7 @@ ConsoleStatus_t consoleStart(void) {
 			loggerLog(LOG_INFO, "System shutdown requested via CLI (EXIT command)");
 			return CONSOLE_SUCCESS;
 			#ifdef DEBUG
-			printf("\x1b[36mDEBUG: EXIT command received. Shutting down console.\x1b[0m\n");
+			printf("\x1b[36m[DEBUG]: EXIT command received. Shutting down console.\x1b[0m\n");
 			#endif
 		} else if (strcmp(command, "LOAD") == 0) {
 			output = handleLoadCommand(argument);
@@ -197,7 +191,7 @@ ConsoleStatus_t consoleStart(void) {
 			output = CMD_UNKNOWN;
 		}
 		#ifdef DEBUG
-		printf("\x1b[36mDEBUG: Command Output = [%d] \x1b[0m\n", output);
+		printf("\x1b[36m[DEBUG]: Command Output = [%d] \x1b[0m\n", output);
 		#endif
 	}
 

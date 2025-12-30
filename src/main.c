@@ -3,8 +3,6 @@
 #include "../inc/memory.h"
 #include "../inc/console.h"
 
-// Global debug flag definition
-bool isDebugMode = false;
 CPU_t CPU;
 
 int main() {

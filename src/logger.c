@@ -22,7 +22,7 @@ static void getCurrentTimeString(char* buffer, size_t size) {
 
 void loggerInit(void) {
 	pthread_mutex_lock(&log_mutex);
-	logFile = fopen(LOG_FILE_NAME, "w");
+	logFile = fopen(LOG_FILE_NAME, "a");
 	pthread_mutex_unlock(&log_mutex);
 }
 
@@ -38,11 +38,6 @@ void loggerClose(void) {
 
 
 void loggerLog(LogLevel_t level, const char* message) {
-
-	if (level == LOG_DEBUG && isDebugMode == false) {
-		return;
-	}
-
 	pthread_mutex_lock(&log_mutex);
 	logFile = fopen(LOG_FILE_NAME, "a");
 	if (logFile != NULL) {
@@ -59,9 +54,6 @@ void loggerLog(LogLevel_t level, const char* message) {
 				break;
 			case LOG_ERROR:
 				prefix = " [ERROR]:";
-				break;
-			case LOG_DEBUG:
-				prefix = " [DEBUG]:";
 				break;
 		}
 

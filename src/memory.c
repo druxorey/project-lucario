@@ -1,6 +1,4 @@
 #include <pthread.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "../inc/memory.h"
 #include "../inc/logger.h"
@@ -81,8 +79,9 @@ MemoryStatus_t readMemory(address logicalAddr, word* outData) {
 
 	*outData = RAM[physAddr];
 
-	snprintf(logBuffer, sizeof(logBuffer), "Mem READ: Logic[%d] -> Phys[%d] = Val[%d]", logicalAddr, physAddr, *outData);
-	loggerLog(LOG_DEBUG, logBuffer);
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Mem READ: Logic[%d] -> Phys[%d] = Val[%d]\x1b[0m\n", logicalAddr, physAddr, *outData);
+	#endif
 
 	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_SUCCESS;
@@ -117,8 +116,9 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 
 	RAM[physAddr] = data;
 
-	snprintf(logBuffer, sizeof(logBuffer), "Mem WRITE: Logic[%d] -> Phys[%d] = Val[%d]", logicalAddr, physAddr, data);
-	loggerLog(LOG_DEBUG, logBuffer);
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Mem WRITE: Logic[%d] -> Phys[%d] = Val[%d]\x1b[0m\n", logicalAddr, physAddr, data);
+	#endif
 
 	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_SUCCESS;
