@@ -6,7 +6,7 @@
  * REPL (Read-Eval-Print Loop), parses commands (LOAD, RUN, DEBUG, EXIT),
  * and manages the system execution modes.
  *
- * @version 1.2
+ * @version 1.3
  */
 
 #ifndef CONSOLE_H
@@ -21,13 +21,13 @@
 /**
  * @brief Command Execution Status Codes.
  * Internal status codes used by the command handlers to indicate the result
- * of a specific operation (LOAD, RUN, etc.) to the main loop.
+ * of a specific operation (DEBUG, RUN, etc.) to the main loop.
  */
 typedef enum {
 	CMD_SUCCESS       = 0,  /**< Command executed successfully. The loop continues. */
 	CMD_EMPTY         = 1,  /**< Input was empty (User just pressed Enter). */
 	CMD_UNKNOWN       = 2,  /**< The entered command is not recognized. */
-	CMD_MISSING_ARGS  = 3,  /**< Command exists (e.g., LOAD) but required argument is missing. */
+	CMD_MISSING_ARGS  = 3,  /**< Command exists (e.g., RUN) but required argument is missing. */
 	CMD_LOAD_ERROR    = 4,  /**< Loader failed to open or parse the specified file. */
 	CMD_RUNTIME_ERROR = 5   /**< Generic error during execution (CPU/Memory fault). */
 } CommandStatus_t;
@@ -59,14 +59,14 @@ ConsoleStatus_t consoleStart(void);
  * and its argument.
  *
  * @param input The raw input buffer from stdin (modified in place).
- * @param command Buffer to store the extracted command (e.g., "LOAD").
+ * @param command Buffer to store the extracted command (e.g., "RUN").
  * @param argument Buffer to store the extracted argument (e.g., "file.txt").
  * @return CommandStatus_t CMD_SUCCESS if parsed, CMD_EMPTY if input was blank.
  */
 CommandStatus_t parseInput(char* input, char* command, char* argument);
 
 /**
- * @brief Handles the 'LOAD' command logic.
+ * @brief Handles the program loading logic.
  *
  * Validates the filename argument and invokes the Loader subsystem to
  * inject the program into memory. Logs the operation result.
@@ -82,9 +82,10 @@ CommandStatus_t handleLoadCommand(char* argument);
  * Initiates the CPU execution in Normal Mode (continuous execution).
  * Logs the start and end of the execution.
  *
+ * @param argument The filename string provided by the user.
  * @return CommandStatus_t CMD_SUCCESS if execution finished normally, or CMD_RUNTIME_ERROR.
  */
-CommandStatus_t handleRunCommand(void);
+CommandStatus_t handleRunCommand(char* argument);
 
 /**
  * @brief Handles the 'DEBUG' command logic.
@@ -92,8 +93,9 @@ CommandStatus_t handleRunCommand(void);
  * Starts an interactive Debug Mode session where the user can step through
  * instructions and inspect registers. Manages its own internal command loop.
  *
+ * @param argument The filename string provided by the user.
  * @return CommandStatus_t CMD_SUCCESS upon completion of the debug session.
  */
-CommandStatus_t handleDebugCommand(void);
+CommandStatus_t handleDebugCommand(char* argument);
 
 #endif // CONSOLE_H

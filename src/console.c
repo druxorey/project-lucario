@@ -66,9 +66,8 @@ static void printFullRegisters(void) {
 
 static void printCommandList(void) {
 	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m\n");
-	printf("  \x1b[1mLOAD <file>\x1b[0m : Load a program into memory\n");
-	printf("  \x1b[1mRUN\x1b[0m         : Execute program in Normal Mode\n");
-	printf("  \x1b[1mDEBUG\x1b[0m       : Execute program in Debug Mode\n");
+	printf("  \x1b[1mRUN <file>\x1b[0m         : Execute program in Normal Mode\n");
+	printf("  \x1b[1mDEBUG <file>\x1b[0m       : Execute program in Debug Mode\n");
 	printf("  \x1b[1mEXIT\x1b[0m        : Shutdown the system\n");
 	printf("  \x1b[1mCOMANDS\x1b[0m     : Show this list\n\n");
 }
@@ -87,8 +86,8 @@ CommandStatus_t parseInput(char* input, char* command, char* argument) {
 	// The space between %s and %[^\n] consumes the separating space
 	sscanf(input, "%19s %99[^\n]", command, argument);
 	// sscanf returns how many variables it successfully filled
-	// If input is "RUN", matches will be 1 (argument remains empty due to the initial clearing)
-	// If input is "LOAD file", matches will be 2
+	// If input is "EXIT", matches will be 1 (argument remains empty)
+	// If input is "RUN file" or "DEBUG file", matches will be 2
 	
 	#ifdef DEBUG
 	printf("\x1b[36m[DEBUG]: Parsed -> Command: [%s]; Argument: [%s] \x1b[0m\n", command, argument);
@@ -101,14 +100,14 @@ CommandStatus_t parseInput(char* input, char* command, char* argument) {
 CommandStatus_t handleLoadCommand(char* argument) {
 	if (strlen(argument) == 0) {
 		printf("Error: Missing filename.\n");
-		loggerLog(LOG_WARNING, "User attempted LOAD command without filename argument");
+		loggerLog(LOG_WARNING, "User attempted to load program without filename argument");
 		return CMD_MISSING_ARGS;
 	}
 
 	ProgramInfo_t info = loadProgram(argument);
 
 	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: LOAD processed. Status = [%d]\x1b[0m\n", info.status);
+	printf("\x1b[36m[DEBUG]: Program load processed. Status = [%d]\x1b[0m\n", info.status);
 	#endif
 
 	if (info.status == LOAD_SUCCESS) {
@@ -125,7 +124,12 @@ CommandStatus_t handleLoadCommand(char* argument) {
 }
 
 
-CommandStatus_t handleRunCommand(void) {
+CommandStatus_t handleRunCommand(char* argument) {
+	cpuReset();
+
+	CommandStatus_t loadStatus = handleLoadCommand(argument);
+	if (loadStatus != CMD_SUCCESS) return loadStatus;
+	
 	printf("Executing in Normal Mode...\n");
 	loggerLog(LOG_INFO, "Starting execution in Normal Mode");
 
@@ -144,7 +148,12 @@ CommandStatus_t handleRunCommand(void) {
 }
 
 
-CommandStatus_t handleDebugCommand(void) {
+CommandStatus_t handleDebugCommand(char* argument) {
+	cpuReset();
+
+	CommandStatus_t loadStatus = handleLoadCommand(argument);
+	if (loadStatus != CMD_SUCCESS) return loadStatus;
+
 	printf("Executing in Debug Mode...\n");
 	loggerLog(LOG_INFO, "Starting execution in Debug Mode.");
 
@@ -221,12 +230,10 @@ ConsoleStatus_t consoleStart(void) {
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: EXIT command received. Shutting down console.\x1b[0m\n");
 			#endif
-		} else if (strcmp(command, "LOAD") == 0) {
-			output = handleLoadCommand(argument);
 		} else if (strcmp(command, "RUN") == 0) {
-			output = handleRunCommand();
+			output = handleRunCommand(argument);
 		} else if (strcmp(command, "DEBUG") == 0) {
-			output = handleDebugCommand();
+			output = handleDebugCommand(argument);
 		} else if (strcmp(command, "COMANDS") == 0) {
 			printCommandList();
 		} else {
