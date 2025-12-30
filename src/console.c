@@ -182,16 +182,32 @@ static CommandStatus_t handleDebugCommand(void) {
 }
 
 
+static void printCommandList(void) {
+	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m\n");
+	printf("  \x1b[1mLOAD <file>\x1b[0m : Load a program into memory\n");
+	printf("  \x1b[1mRUN\x1b[0m         : Execute program in Normal Mode\n");
+	printf("  \x1b[1mDEBUG\x1b[0m       : Execute program in Debug Mode\n");
+	printf("  \x1b[1mEXIT\x1b[0m        : Shutdown the system\n");
+	printf("  \x1b[1mCOMANDS\x1b[0m     : Show this list\n\n");
+}
+
+
 ConsoleStatus_t consoleStart(void) {
 	char buffer[CONSOLE_BUFFER_SIZE];
 	char command[CONSOLE_BUFFER_SIZE];
 	char argument[CONSOLE_BUFFER_SIZE];
 	
-	printf("\033[2J\033[H");
-	printf("=== LUCARIO REPL ===\n");
+	printf("\x1b[2J\x1b[H\n");
+
+	printf("  █     █  █  █▀▀▀  █▀▀█  █▀▀█  ▀█▀  █▀▀█     █▀▀█ █▀▀▀  █▀▀█   █   \n");
+	printf("  █     █  █  █     █▀▀█  █▀▀▄   █   █  █     █▀▀▄ █▀▀▀  █▀▀▀   █   \n");
+	printf("  █     █  █  █     █  █  █  █   █   █  █     █  █ █     █      █   \n");
+	printf("  ▀▀▀▀  ▀▀▀▀  ▀▀▀▀  ▀  ▀  ▀  ▀  ▀▀▀  ▀▀▀▀     ▀  ▀ ▀▀▀▀  ▀      ▀▀▀▀\n");
+
+	printCommandList();
 	
 	while(true) {
-		printf("LUCARIO > ");
+		printf("\x1b[35mLUCARIO\x1b[0m > ");
 		if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
 		
 		CommandStatus_t output = CMD_SUCCESS;
@@ -211,6 +227,8 @@ ConsoleStatus_t consoleStart(void) {
 			output = handleRunCommand();
 		} else if (strcmp(command, "DEBUG") == 0) {
 			output = handleDebugCommand();
+		} else if (strcmp(command, "COMANDS") == 0) {
+			printCommandList();
 		} else {
 			printf("Unknown command: %s\n", command);
 			snprintf(logBuffer, sizeof(logBuffer), "Unknown command received: %s", command);
