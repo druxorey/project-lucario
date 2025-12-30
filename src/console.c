@@ -99,11 +99,7 @@ static CommandStatus_t handleRunCommand(void) {
 	printf("Executing in Normal Mode...\n");
 	loggerLog(LOG_INFO, "Starting execution in Normal Mode");
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: RUN received. Starting CPU execution.\x1b[0m\n");
-	#endif
-
-	if (cpuRun() == 0) { // Asumiendo que cpuRun retorna 0 en éxito
+	if (cpuRun() == 0) {
 		printf("Execution finished.\n");
 		loggerLog(LOG_INFO, "Normal Mode execution finished successfully");
 		return CMD_SUCCESS;
@@ -118,36 +114,67 @@ static CommandStatus_t handleRunCommand(void) {
 }
 
 
+static void printFullRegisters(void) {
+	printf("\n\x1b[1;33m================= CPU STATE =================\x1b[0m\n");
+	printf(" PC:     %05d | AC:  %08d (%d)\n", CPU.PSW.pc, CPU.AC, wordToInt(CPU.AC));
+	printf(" IR:  %08d | OP:  %02d | MD: %1d | VAL: %05d\n",
+	       CPU.IR,
+	       GET_INSTRUCTION_OPCODE(CPU.IR),
+	       GET_INSTRUCTION_MODE(CPU.IR),
+	       GET_INSTRUCTION_VALUE(CPU.IR));
+	printf(" MDR: %08d | MAR: %05d\n", CPU.MDR, CPU.MAR);
+	printf("---------------------------------------------\n");
+	printf(" RB:  %08d | RL:  %08d\n", CPU.RB, CPU.RL);
+	printf(" SP:  %08d | RX:  %08d\n", CPU.SP, CPU.RX);
+	printf(" Int: %s      | CC: %d | PSW Mode: %s\n",
+	       (CPU.PSW.interruptEnable) ? "ON " : "OFF",
+	       CPU.PSW.conditionCode,
+	       (CPU.PSW.mode == MODE_KERNEL) ? "KERNEL" : "USER");
+	printf("\x1b[1;33m=============================================\x1b[0m\n\n");
+}
+
+
 static CommandStatus_t handleDebugCommand(void) {
 	printf("Executing in Debug Mode...\n");
-	loggerLog(LOG_INFO, "Starting execution in Debug Mode");
+	loggerLog(LOG_INFO, "Starting execution in Debug Mode.");
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: DEBUG received. Starting Debug Mode execution.\x1b[0m\n");
-	#endif
+	char debugBuf[CONSOLE_BUFFER_SIZE];
+	bool isRunning = true;
+	
+	printf("\n\x1b[32mDEBUGGER COMMANDS:\x1b[0m\n");
+	printf("  \x1b[1mSTEP\x1b[0m (or ENTER) : Execute next instruction.\n");
+	printf("  \x1b[1mREGS\x1b[0m            : View all registers detailed.\n");
+	printf("  \x1b[1mQUIT\x1b[0m            : Exit debugger (stops execution).\n");
 
-	char debugBuf[10];
+	printFullRegisters();
 
-	printf("--- DEBUG MODE STARTED ---\n");
-	printf("Press [ENTER] to step, 'q' to quit debug mode.\n");
-
-	while(true) {
-		printf("[DEBUG] PC:%03d | IR:%08d | AC:%08d\n", CPU.PSW.pc, CPU.IR, CPU.AC);
+	while (isRunning) {
+		printf("\x1b[32mDEBUG > \x1b[0m");
 		
-		bool active = cpuStep();
+		if (fgets(debugBuf, sizeof(debugBuf), stdin) == NULL) break;
 		
-		if (!active) {
-			printf("--- PROGRAM FINISHED (HALT) ---\n");
-			loggerLog(LOG_INFO, "Debug Mode session finished (Program End)");
-			return CMD_SUCCESS;
-		}
+		debugBuf[strcspn(debugBuf, "\n")] = 0;
+		char* cmd = trimWhitespace(debugBuf);
 
-		printf(">> ");
-		if (fgets(debugBuf, sizeof(debugBuf), stdin) != NULL) {
-			if (debugBuf[0] == 'q') {
-				loggerLog(LOG_INFO, "Debug Mode session aborted by user");
+		if (strlen(cmd) == 0 || strcmp(cmd, "STEP") == 0) {
+			int currentPC = CPU.PSW.pc;
+			bool active = cpuStep();
+
+			printf(" -> Executed Addr: \x1b[33m%03d\x1b[0m | Instr: \x1b[33m%08d\x1b[0m | Result AC: \x1b[33m%08d\x1b[0m\n", currentPC, CPU.IR, CPU.AC);
+
+			if (!active) {
+				printf("\x1b[31mPROGRAM HALTED\x1b[0m\n");
+				loggerLog(LOG_INFO, "Debug Mode session finished (CPU Halted).");
 				return CMD_SUCCESS;
 			}
+		} else if (strcmp(cmd, "REGS") == 0) {
+			printFullRegisters();
+		} else if (strcmp(cmd, "QUIT") == 0) {
+			printf("Exiting debugger...\n");
+			loggerLog(LOG_INFO, "Debug Mode session aborted by user.");
+			isRunning = false;
+		} else {
+			printf("Unknown debug command. Use: STEP, REGS, QUIT.\n");
 		}
 	}
 	
