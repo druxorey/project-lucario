@@ -6,7 +6,7 @@
  * REPL (Read-Eval-Print Loop), parses commands (LOAD, RUN, DEBUG, EXIT),
  * and manages the system execution modes.
  *
- * @version 1.1
+ * @version 1.2
  */
 
 #ifndef CONSOLE_H
@@ -51,5 +51,49 @@ typedef enum {
  * @return ConsoleStatus_t CONSOLE_SUCCESS on normal exit, or CONSOLE_RUNTIME_ERROR on failure.
  */
 ConsoleStatus_t consoleStart(void);
+
+/**
+ * @brief Parses and tokenizes the raw user input.
+ *
+ * Cleans the input string (trims whitespace) and splits it into the command
+ * and its argument.
+ *
+ * @param input The raw input buffer from stdin (modified in place).
+ * @param command Buffer to store the extracted command (e.g., "LOAD").
+ * @param argument Buffer to store the extracted argument (e.g., "file.txt").
+ * @return CommandStatus_t CMD_SUCCESS if parsed, CMD_EMPTY if input was blank.
+ */
+CommandStatus_t parseInput(char* input, char* command, char* argument);
+
+/**
+ * @brief Handles the 'LOAD' command logic.
+ *
+ * Validates the filename argument and invokes the Loader subsystem to
+ * inject the program into memory. Logs the operation result.
+ *
+ * @param argument The filename string provided by the user.
+ * @return CommandStatus_t CMD_SUCCESS, CMD_MISSING_ARGS, or CMD_LOAD_ERROR.
+ */
+CommandStatus_t handleLoadCommand(char* argument);
+
+/**
+ * @brief Handles the 'RUN' command logic.
+ *
+ * Initiates the CPU execution in Normal Mode (continuous execution).
+ * Logs the start and end of the execution.
+ *
+ * @return CommandStatus_t CMD_SUCCESS if execution finished normally, or CMD_RUNTIME_ERROR.
+ */
+CommandStatus_t handleRunCommand(void);
+
+/**
+ * @brief Handles the 'DEBUG' command logic.
+ *
+ * Starts an interactive Debug Mode session where the user can step through
+ * instructions and inspect registers. Manages its own internal command loop.
+ *
+ * @return CommandStatus_t CMD_SUCCESS upon completion of the debug session.
+ */
+CommandStatus_t handleDebugCommand(void);
 
 #endif // CONSOLE_H

@@ -44,7 +44,7 @@ static char* trimWhitespace(char* string) {
 }
 
 
-static CommandStatus_t parseInput(char* input, char* command, char* argument) {
+CommandStatus_t parseInput(char* input, char* command, char* argument) {
 	command[0] = '\0';
 	argument[0] = '\0';
 	input[strcspn(input, "\n")] = 0;
@@ -68,7 +68,7 @@ static CommandStatus_t parseInput(char* input, char* command, char* argument) {
 }
 
 
-static CommandStatus_t handleLoadCommand(char* argument) {
+CommandStatus_t handleLoadCommand(char* argument) {
 	if (strlen(argument) == 0) {
 		printf("Error: Missing filename.\n");
 		loggerLog(LOG_WARNING, "User attempted LOAD command without filename argument");
@@ -95,7 +95,7 @@ static CommandStatus_t handleLoadCommand(char* argument) {
 }
 
 
-static CommandStatus_t handleRunCommand(void) {
+CommandStatus_t handleRunCommand(void) {
 	printf("Executing in Normal Mode...\n");
 	loggerLog(LOG_INFO, "Starting execution in Normal Mode");
 
@@ -134,7 +134,7 @@ static void printFullRegisters(void) {
 }
 
 
-static CommandStatus_t handleDebugCommand(void) {
+CommandStatus_t handleDebugCommand(void) {
 	printf("Executing in Debug Mode...\n");
 	loggerLog(LOG_INFO, "Starting execution in Debug Mode.");
 
