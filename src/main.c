@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #include "../inc/definitions.h"
 #include "../inc/logger.h"
 #include "../inc/memory.h"

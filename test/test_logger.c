@@ -1,11 +1,6 @@
 #include <stdbool.h>
-#include <pthread.h>
-#include <string.h>
-
 #include "../lib/utest.h"
 #include "../inc/logger.h"
-
-bool isDebugMode = false;
 
 UTEST_MAIN();
 

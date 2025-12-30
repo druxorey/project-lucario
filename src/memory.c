@@ -1,12 +1,11 @@
+#include <stdio.h>
+#include <stdbool.h>
 #include <pthread.h>
 
 #include "../inc/memory.h"
 #include "../inc/logger.h"
 
-// Physical memory storage
 word RAM[RAM_SIZE];
-
-// Mutex for Bus arbitration
 pthread_mutex_t BUS_LOCK;
 
 void memoryInit(void) {
@@ -14,34 +13,28 @@ void memoryInit(void) {
 	loggerLog(LOG_INFO, "Memory Subsystem Initialized");
 }
 
+
 static bool isPhysicalAddressValid(int physAddr) {
 	// Prevents buffer overflow on the actual C array
 	return (physAddr >= 0 && physAddr < RAM_SIZE);
 }
 
+
 static bool isProtectionViolation(int physAddr) {
 	// Kernel Mode bypasses memory protection (God Mode)
-	if (CPU.PSW.mode == MODE_KERNEL) {
-		return false;
-	}
-
+	if (CPU.PSW.mode == MODE_KERNEL) return false;
 	// User Mode must stay within its assigned partition [RB, RL]
-	if (physAddr < CPU.RB || physAddr > CPU.RL) {
-		return true;
-	}
-
+	if (physAddr < CPU.RB || physAddr > CPU.RL) return true;
 	return false;
 }
+
 
 static int getPhysicalAddress(address logicalAddr, MemoryStatus_t* status) {
 	int physAddr;
 
 	// Translate: Absolute addressing for Kernel, Relative for User
-	if (CPU.PSW.mode == MODE_KERNEL) {
-		physAddr = logicalAddr;
-	} else {
-		physAddr = logicalAddr + CPU.RB;
-	}
+	if (CPU.PSW.mode == MODE_KERNEL) physAddr = logicalAddr;
+	else physAddr = logicalAddr + CPU.RB;
 
 	if (isProtectionViolation(physAddr)) {
 		*status = MEM_ERR_PROTECTION;

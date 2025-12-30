@@ -1,19 +1,14 @@
-#include <stdbool.h>
-#include <pthread.h>
-#include <string.h>
-
 #include "../lib/utest.h"
 #include "../inc/console.h"
 #include "../inc/loader.h"
-#include "../inc/cpu.h"
 #include "../inc/logger.h"
-
-CPU_t CPU;
-bool isDebugMode = false;
 
 static char spyLastFileName[CONSOLE_BUFFER_SIZE];
 static int spyCpuRunCallCount = 0;
 static int spyCpuStepCallCount = 0;
+
+// Mock for Cpu Initialization
+CPU_t CPU;
 
 // Mock for Loader
 ProgramInfo_t loadProgram(char* fileName) {
@@ -28,19 +23,19 @@ ProgramInfo_t loadProgram(char* fileName) {
     return programInfo;
 }
 
-// Mock for CPU Run (Normal Mode)
+// Mock for CPU Run
 int cpuRun(void) {
     spyCpuRunCallCount++;
 	return 0;
 }
 
-// Mock for CPU Step (Debug Mode)
+// Mock for CPU Step
 bool cpuStep(void) {
     spyCpuStepCallCount++;
     return false;
 }
 
-// Mock for CPU Reset (Normal Mode)
+// Mock for CPU Reset
 void cpuReset(void) {
 	return;
 }

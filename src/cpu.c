@@ -1,5 +1,5 @@
+#include <stdio.h>
 #include <stdbool.h>
-#include <pthread.h>
 
 #include "../inc/logger.h"
 #include "../inc/cpu.h"
@@ -8,7 +8,6 @@
 static bool interruptPending = false;
 static InterruptCode_t pendingInterruptCode = 0;
 
-// Helper macro to update flags based on AC value (DRY principle)
 static void updatePSWFlags(void) {
 	if (CPU.AC == 0) CPU.PSW.conditionCode = CC_ZERO;
 	else if (IS_NEGATIVE(CPU.AC)) CPU.PSW.conditionCode = CC_NEG;
@@ -16,9 +15,7 @@ static void updatePSWFlags(void) {
 }
 
 static CPUStatus_t checkStatus(InstructionStatus_t status) {
-	if (status == INSTR_EXEC_FAIL) {
-		return CPU_STOP;
-	}
+	if (status == INSTR_EXEC_FAIL) return CPU_STOP;
 	return CPU_OK;
 }
 
@@ -262,18 +259,15 @@ InstructionStatus_t executeComparison(Instruction_t instruction) {
 
 CPUStatus_t executeSystemCall(void) {
 	int syscallCode = wordToInt(CPU.AC);
-
 	// Temporary convention for Sprint 2:
-	// 0 = EXIT (End execution)
+	// CPU_STOP = EXIT (End execution) (We will have to create a Enum later)
 	// Others = Simulate an operation (e.g. Print) and continue
-	
 	if (syscallCode == 0) {
-		printf("------> SYSTEM CALL [0]: Program requested termination (EXIT).\n");
+		printf("SYSTEM CALL [0]: Program requested termination (EXIT).\n");
 		return CPU_STOP; // This will stop cpuRun()
 	} else {
 		// Any other code is considered a service request that does NOT stop the CPU
-		printf("------> SYSTEM CALL [%d]: Service handled (Simulation).\n", syscallCode);
-		
+		printf("SYSTEM CALL [%d]: Service handled (Simulation).\n", syscallCode);
 		// In the future an interrupt will be generated here, but the CPU does NOT stop,
 		// it simply continues to the next instruction after being serviced.
 		return CPU_OK;
@@ -303,6 +297,7 @@ CPUStatus_t fetch(void) {
 	return CPU_OK;
 }
 
+
 Instruction_t decode(void) {
 	Instruction_t inst;
 	inst.opCode = GET_INSTRUCTION_OPCODE(CPU.IR);
@@ -310,6 +305,7 @@ Instruction_t decode(void) {
 	inst.value = GET_INSTRUCTION_VALUE(CPU.IR);
 	return inst;
 }
+
 
 CPUStatus_t execute(Instruction_t instruction) {
 	InstructionStatus_t status = INSTR_EXEC_SUCCESS;
@@ -393,6 +389,7 @@ CPUStatus_t execute(Instruction_t instruction) {
 	}
 }
 
+
 bool cpuStep(void) {
 	#ifdef DEBUG
 	printf("\x1b[36m[DEBUG]: Starting CPU step at PC:%03d\x1b[0m\n", CPU.PSW.pc);
@@ -419,6 +416,7 @@ bool cpuStep(void) {
 	return true;
 }
 
+
 int cpuRun(void) {
 	while (true) {
 		if (!cpuStep()) {
@@ -427,6 +425,7 @@ int cpuRun(void) {
 	}
 	return 0;
 }
+
 
 void cpuReset(void) {
 	CPU = (CPU_t){0};

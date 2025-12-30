@@ -13,20 +13,19 @@
 #define CPU_H
 
 #include "../inc/definitions.h"
-#include "memory.h"
 
 /**
  * @brief CPU Status Codes.
  * Used to indicate the result of internal CPU operations to the control loop.
  */
 typedef enum {
-	CPU_OK = 0,          /**< CPU operation successful */
-    CPU_STOP = 1,        /**< CPU has reached a stop condition */
+	CPU_OK   = 0,          /**< CPU operation successful */
+    CPU_STOP = 1,          /**< CPU has reached a stop condition */
 } CPUStatus_t;
 
 typedef enum {
 	INSTR_EXEC_SUCCESS = 0,
-	INSTR_EXEC_FAIL = 1
+	INSTR_EXEC_FAIL    = 1
 } InstructionStatus_t;
 
 /**

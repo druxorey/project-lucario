@@ -1,11 +1,9 @@
-#include <stdlib.h>
-#include <pthread.h>
+#include <stdbool.h>
 #include "../lib/utest.h"
 #include "../inc/memory.h"
 
 // Global mock CPU instance
 CPU_t CPU;
-bool isDebugMode = false;
 
 UTEST_MAIN();
 

@@ -1,5 +1,5 @@
-#include <stdbool.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <pthread.h>
 #include <string.h>
 #include <ctype.h>
@@ -41,6 +41,36 @@ static char* trimWhitespace(char* string) {
 
 	*destiny = '\0';
 	return string;
+}
+
+
+static void printFullRegisters(void) {
+	printf("\n\x1b[1;33m================= CPU STATE =================\x1b[0m\n");
+	printf(" PC:     %05d | AC:  %08d (%d)\n", CPU.PSW.pc, CPU.AC, wordToInt(CPU.AC));
+	printf(" IR:  %08d | OP:  %02d | MD: %1d | VAL: %05d\n",
+	       CPU.IR,
+	       GET_INSTRUCTION_OPCODE(CPU.IR),
+	       GET_INSTRUCTION_MODE(CPU.IR),
+	       GET_INSTRUCTION_VALUE(CPU.IR));
+	printf(" MDR: %08d | MAR: %05d\n", CPU.MDR, CPU.MAR);
+	printf("---------------------------------------------\n");
+	printf(" RB:  %08d | RL:  %08d\n", CPU.RB, CPU.RL);
+	printf(" SP:  %08d | RX:  %08d\n", CPU.SP, CPU.RX);
+	printf(" Int: %s      | CC: %d | PSW Mode: %s\n",
+	       (CPU.PSW.interruptEnable) ? "ON " : "OFF",
+	       CPU.PSW.conditionCode,
+	       (CPU.PSW.mode == MODE_KERNEL) ? "KERNEL" : "USER");
+	printf("\x1b[1;33m=============================================\x1b[0m\n\n");
+}
+
+
+static void printCommandList(void) {
+	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m\n");
+	printf("  \x1b[1mLOAD <file>\x1b[0m : Load a program into memory\n");
+	printf("  \x1b[1mRUN\x1b[0m         : Execute program in Normal Mode\n");
+	printf("  \x1b[1mDEBUG\x1b[0m       : Execute program in Debug Mode\n");
+	printf("  \x1b[1mEXIT\x1b[0m        : Shutdown the system\n");
+	printf("  \x1b[1mCOMANDS\x1b[0m     : Show this list\n\n");
 }
 
 
@@ -114,26 +144,6 @@ CommandStatus_t handleRunCommand(void) {
 }
 
 
-static void printFullRegisters(void) {
-	printf("\n\x1b[1;33m================= CPU STATE =================\x1b[0m\n");
-	printf(" PC:     %05d | AC:  %08d (%d)\n", CPU.PSW.pc, CPU.AC, wordToInt(CPU.AC));
-	printf(" IR:  %08d | OP:  %02d | MD: %1d | VAL: %05d\n",
-	       CPU.IR,
-	       GET_INSTRUCTION_OPCODE(CPU.IR),
-	       GET_INSTRUCTION_MODE(CPU.IR),
-	       GET_INSTRUCTION_VALUE(CPU.IR));
-	printf(" MDR: %08d | MAR: %05d\n", CPU.MDR, CPU.MAR);
-	printf("---------------------------------------------\n");
-	printf(" RB:  %08d | RL:  %08d\n", CPU.RB, CPU.RL);
-	printf(" SP:  %08d | RX:  %08d\n", CPU.SP, CPU.RX);
-	printf(" Int: %s      | CC: %d | PSW Mode: %s\n",
-	       (CPU.PSW.interruptEnable) ? "ON " : "OFF",
-	       CPU.PSW.conditionCode,
-	       (CPU.PSW.mode == MODE_KERNEL) ? "KERNEL" : "USER");
-	printf("\x1b[1;33m=============================================\x1b[0m\n\n");
-}
-
-
 CommandStatus_t handleDebugCommand(void) {
 	printf("Executing in Debug Mode...\n");
 	loggerLog(LOG_INFO, "Starting execution in Debug Mode.");
@@ -179,16 +189,6 @@ CommandStatus_t handleDebugCommand(void) {
 	}
 	
 	return CMD_SUCCESS;
-}
-
-
-static void printCommandList(void) {
-	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m\n");
-	printf("  \x1b[1mLOAD <file>\x1b[0m : Load a program into memory\n");
-	printf("  \x1b[1mRUN\x1b[0m         : Execute program in Normal Mode\n");
-	printf("  \x1b[1mDEBUG\x1b[0m       : Execute program in Debug Mode\n");
-	printf("  \x1b[1mEXIT\x1b[0m        : Shutdown the system\n");
-	printf("  \x1b[1mCOMANDS\x1b[0m     : Show this list\n\n");
 }
 
 
