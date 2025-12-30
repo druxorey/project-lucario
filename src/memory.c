@@ -11,7 +11,7 @@ pthread_mutex_t BUS_LOCK;
 
 void memoryInit(void) {
 	pthread_mutex_init(&BUS_LOCK, NULL);
-	loggerLog(LOG_INFO, "Memory Subsystem Initialized.");
+	loggerLog(LOG_INFO, "Memory Subsystem Initialized");
 }
 
 static bool isPhysicalAddressValid(int physAddr) {
@@ -70,9 +70,9 @@ MemoryStatus_t readMemory(address logicalAddr, word* outData) {
 		pthread_mutex_unlock(&BUS_LOCK);
 		
 		if (status == MEM_ERR_PROTECTION) {
-			loggerLog(LOG_ERROR, "Segmentation Fault: Read Access Violation.");
+			loggerLog(LOG_ERROR, "Segmentation Fault: Read Access Violation");
 		} else {
-			loggerLog(LOG_ERROR, "Bus Error: Physical Address Out of Bounds.");
+			loggerLog(LOG_ERROR, "Bus Error: Physical Address Out of Bounds");
 		}
 		return status;
 	}
@@ -96,7 +96,7 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 	// Validate data structure (Sign bit + 7 magnitude digits)
 	if (!IS_VALID_WORD(data)) {
 		pthread_mutex_unlock(&BUS_LOCK);
-		loggerLog(LOG_ERROR, "Memory Error: Invalid word format (sign or magnitude).");
+		loggerLog(LOG_ERROR, "Memory Error: Invalid word format (sign or magnitude)");
 		return MEM_ERR_INVALID_DATA;
 	}
 
@@ -107,9 +107,9 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 		pthread_mutex_unlock(&BUS_LOCK);
 		
 		if (status == MEM_ERR_PROTECTION) {
-			loggerLog(LOG_ERROR, "Segmentation Fault: Write Access Violation.");
+			loggerLog(LOG_ERROR, "Segmentation Fault: Write Access Violation");
 		} else {
-			loggerLog(LOG_ERROR, "Bus Error: Physical Address Out of Bounds.");
+			loggerLog(LOG_ERROR, "Bus Error: Physical Address Out of Bounds");
 		}
 		return status;
 	}
