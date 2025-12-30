@@ -63,9 +63,13 @@ MemoryStatus_t readMemory(address logicalAddr, word* outData) {
 		pthread_mutex_unlock(&BUS_LOCK);
 		
 		if (status == MEM_ERR_PROTECTION) {
-			loggerLog(LOG_ERROR, "Segmentation Fault: Read Access Violation");
+			loggerLog(LOG_ERROR, "Segmentation Fault (READ):");
+			snprintf(logBuffer, sizeof(logBuffer), "Access Violation at LogicAddr [%d]. Limits [RB:%d, RL:%d]", logicalAddr, CPU.RB, CPU.RL);
+			loggerLog(LOG_ERROR, logBuffer);
 		} else {
-			loggerLog(LOG_ERROR, "Bus Error: Physical Address Out of Bounds");
+			loggerLog(LOG_ERROR, "Bus Error (READ): ");
+			snprintf(logBuffer, sizeof(logBuffer), "Physical Address translation failed for LogicAddr [%d]", logicalAddr);
+			loggerLog(LOG_ERROR, logBuffer);
 		}
 		return status;
 	}
@@ -89,7 +93,9 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 	// Validate data structure (Sign bit + 7 magnitude digits)
 	if (!IS_VALID_WORD(data)) {
 		pthread_mutex_unlock(&BUS_LOCK);
-		loggerLog(LOG_ERROR, "Memory Error: Invalid word format (sign or magnitude)");
+		loggerLog(LOG_ERROR, "Memory Data Error: ");
+		snprintf(logBuffer, sizeof(logBuffer), "Attempted to write invalid word [%d]. Max magnitude is 7 digits.", data);
+		loggerLog(LOG_ERROR, logBuffer);
 		return MEM_ERR_INVALID_DATA;
 	}
 
@@ -100,9 +106,13 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 		pthread_mutex_unlock(&BUS_LOCK);
 		
 		if (status == MEM_ERR_PROTECTION) {
-			loggerLog(LOG_ERROR, "Segmentation Fault: Write Access Violation");
+		loggerLog(LOG_ERROR, "Segmentation Fault (WRITE): ");
+			snprintf(logBuffer, sizeof(logBuffer), "Access Violation at LogicAddr [%d]. Limits [RB:%d, RL:%d]", logicalAddr, CPU.RB, CPU.RL);
+			loggerLog(LOG_ERROR, logBuffer);
 		} else {
-			loggerLog(LOG_ERROR, "Bus Error: Physical Address Out of Bounds");
+		loggerLog(LOG_ERROR, "Bus Error (WRITE): ");
+			snprintf(logBuffer, sizeof(logBuffer), "Physical Address translation failed for LogicAddr [%d]", logicalAddr);
+			loggerLog(LOG_ERROR, logBuffer);
 		}
 		return status;
 	}
