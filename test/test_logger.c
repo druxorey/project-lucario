@@ -43,7 +43,7 @@ UTEST(Logger, LogFileUpdate) {
 	char buffer[100];
 	bool found = false;
 	while (fgets(buffer, 100, f)) {
-		if (strstr(buffer, "] [ERROR]: Writing test log entry")) {
+		if (strstr(buffer, ": [ERROR] Writing test log entry")) {
 			found = true;
 			break;
 		}
@@ -66,7 +66,7 @@ UTEST(Logger, InterruptLogFormat) {
 	char buffer[256];
 	bool found = false;
 	while (fgets(buffer, (int)sizeof(buffer), f)) {
-		if (strstr(buffer, "] [WARN]: Arithmetic overflow interrupt") != NULL) {
+		if (strstr(buffer, ": [WARN] Arithmetic overflow interrupt") != NULL) {
 			found = true;
 			break;
 		}
