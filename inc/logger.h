@@ -5,7 +5,7 @@
  * Handles writing execution logs to a file and standard output,
  * supporting thread safety and specific formats for debug/interrupts.
  *
- * @version 1.0
+ * @version 1.1
  */
 
 #ifndef LOGGER_H
@@ -24,20 +24,9 @@ typedef enum {
 } LogLevel_t;
 
 /**
- * @brief Interrupt Codes.
- * Used to identify specific system interrupts.
- */
-#define COLOR_WARNING "\x1b[33m"
-#define COLOR_ERROR   "\x1b[31m"
-#define COLOR_DEBUG   "\x1b[34m"
-#define COLOR_RESET   "\x1b[0m"
-
-/**
  * @brief Initializes the logging system.
  * Opens the log file (creating it if it doesn't exist) and initializes
  * the mutex for thread safety.
- *
- * @param filename Path to the output log file.
  */
 void loggerInit(void);
 
