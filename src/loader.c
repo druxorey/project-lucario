@@ -41,18 +41,39 @@ ProgramInfo_t loadProgram(char* filePath) {
 		fscanf(programFile, "%*s %d", &programInfo.wordCount);
 		fscanf(programFile, "%*s %s", programInfo.programName);
 
-		snprintf(logBuffer, sizeof(logBuffer), "Loader: Metadata parsed - Name: %s, Words: %d, Start Line: %d",
-				 programInfo.programName, programInfo.wordCount, programInfo._start);
+		snprintf(logBuffer, sizeof(logBuffer), "Loader: Metadata parsed - Name: %s, Words: %d, Start Line: %d", programInfo.programName, programInfo.wordCount, programInfo._start);
 		loggerLog(LOG_INFO, logBuffer);
 
 		CPU.PSW.mode = MODE_KERNEL;
 		loggerLog(LOG_INFO, "Loader: Switched to KERNEL MODE for memory injection.");
+
+		if (OS_RESERVED_SIZE + MIN_STACK_SIZE + programInfo.wordCount > RAM_SIZE) {
+			snprintf(logBuffer, sizeof(logBuffer), "Loader Error: Program size exceeds available memory. Required: %d, Available: %d",
+					OS_RESERVED_SIZE + MIN_STACK_SIZE + programInfo.wordCount, RAM_SIZE);
+			loggerLog(LOG_ERROR, logBuffer);
+
+			programInfo.status = LOAD_FILE_ERROR;
+			return programInfo;
+		}
+
+		int stackMemory = RAM_SIZE - OS_RESERVED_SIZE - programInfo.wordCount;
+		if (stackMemory > DEFAULT_STACK_SIZE) {
+			stackMemory = DEFAULT_STACK_SIZE;
+		}
+
+		#ifdef DEBUG
+		printf("\x1b[36m[DEBUG]: Stack memory available: %d words\x1b[0m\n", stackMemory);
+		#endif
+
+		int processRequiredMemory = stackMemory + programInfo.wordCount;
 		
 		for (int i = 0 ; i < programInfo.wordCount; i++) {
 			word instruction = readProgramWord(programFile);
+
+			MemoryStatus_t ret = writeMemory(OS_RESERVED_SIZE + i, instruction);
 			
-			if (writeMemory(OS_RESERVED_SIZE + i, instruction) != 0) {
-				snprintf(logBuffer, sizeof(logBuffer), "Loader Error: Memory write failed at physical address %d. Possible overflow or violation.", OS_RESERVED_SIZE + i);
+			if (ret != MEM_SUCCESS) {
+				snprintf(logBuffer, sizeof(logBuffer), "Loader Error: Memory write failed at physical address %d (Error Code: %d).", OS_RESERVED_SIZE + i, ret);
 				loggerLog(LOG_ERROR, logBuffer);
 
 				fclose(programFile);
@@ -65,10 +86,17 @@ ProgramInfo_t loadProgram(char* filePath) {
 		loggerLog(LOG_INFO, "Loader: All instructions written to RAM successfully.");
 
 		CPU.RB = OS_RESERVED_SIZE;
-		CPU.RL = OS_RESERVED_SIZE + programInfo.wordCount;
-		CPU.PSW.pc = programInfo._start - 1;
-
+		CPU.RL = OS_RESERVED_SIZE + stackMemory + programInfo.wordCount;
 		snprintf(logBuffer, sizeof(logBuffer), "Loader: Context Set - RB: %d | RL: %d | PC: %d", CPU.RB, CPU.RL, CPU.PSW.pc);
+		loggerLog(LOG_INFO, logBuffer);
+
+		CPU.RX = OS_RESERVED_SIZE + programInfo.wordCount;
+		CPU.SP = CPU.RL;
+		snprintf(logBuffer, sizeof(logBuffer), "Loader: Stack Set - SP: %d | RX (Stack Base): %d", CPU.SP, CPU.RX);
+		loggerLog(LOG_INFO, logBuffer);
+
+		CPU.PSW.pc = programInfo._start - 1;
+		snprintf(logBuffer, sizeof(logBuffer), "Loader: PC set to start of program at address %d.", CPU.PSW.pc);
 		loggerLog(LOG_INFO, logBuffer);
 
 		CPU.PSW.mode = MODE_USER;
