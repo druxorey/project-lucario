@@ -817,3 +817,121 @@ UTEST(CPU_Safety, HandleMemoryProtectionFault) {
 
 	mockMemoryFailProtection = false;
 }
+
+// Verify LOADSP and STRSP instructions for Stack Pointer (SP)
+UTEST(CPU_Stack, LoadAndStoreSP) {
+	setupCleanCPU();
+	Instruction_t instr;
+	InstructionStatus_t status;
+	word initialSp = 1500;
+	
+	// Store initial SP value (AC -> SP)
+	CPU.AC = initialSp;
+	CPU.SP = 0;
+	instr.opCode = OP_STRSP;
+	
+	status = executeDataMovement(instr);
+	
+	ASSERT_EQ(initialSp, CPU.SP);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+
+	// Load SP value into AC (SP -> AC)
+	CPU.AC = 0;
+	instr.opCode = OP_LOADSP;
+	
+	status = executeDataMovement(instr);
+	
+	ASSERT_EQ(initialSp, CPU.AC);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+}
+
+// Verify push operation onto the stack
+UTEST(CPU_Stack, PushOperation) {
+	setupCleanCPU();
+	Instruction_t instr;
+	
+	address codeEnd = 310;
+	address stackTop = 410;
+	word dataToPush = 999;
+	word writtenValue = 0;
+
+	CPU.RB = 300;
+	CPU.RL = stackTop;
+	CPU.RX = codeEnd;
+	CPU.SP = stackTop;
+	CPU.AC = dataToPush;
+
+	instr.opCode = OP_PSH;
+
+	InstructionStatus_t status = executeStackManipulation(instr);
+	
+	ASSERT_EQ(stackTop - 1, CPU.SP);
+	
+	readMemory(CPU.SP, &writtenValue);
+	ASSERT_EQ(dataToPush, writtenValue);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+}
+
+// Verify pop operation from the stack
+UTEST(CPU_Stack, PopOperation) {
+	setupCleanCPU();
+	Instruction_t instr;
+	
+	address stackTop = 410;
+	address currentSP = 409;
+	word dataInStack = 888;
+	
+	writeMemory(currentSP, dataInStack);
+
+	CPU.RB = 300;
+	CPU.RL = stackTop;
+	CPU.SP = currentSP;
+	CPU.AC = 0;
+
+	instr.opCode = OP_POP;
+
+	InstructionStatus_t status = executeStackManipulation(instr);
+	
+	ASSERT_EQ(dataInStack, CPU.AC);
+	ASSERT_EQ(stackTop, CPU.SP);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+}
+
+// Verify stack overflow protection (colliding with code segment)
+UTEST(CPU_Stack, StackOverflowProtection) {
+	setupCleanCPU();
+	Instruction_t instr;
+	
+	address codeEnd = 310;
+	
+	CPU.RX = codeEnd;
+	CPU.SP = codeEnd;
+	CPU.AC = 123;
+
+	// We try to PUSH. It should try to write at 309,
+	// which is code area (or out of assigned stack limit).
+	instr.opCode = OP_PSH;
+
+	InstructionStatus_t status = executeStackManipulation(instr);
+	
+	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
+	ASSERT_EQ(codeEnd, CPU.SP);
+}
+
+// Verify stack underflow protection (popping from an empty stack)
+UTEST(CPU_Stack, StackUnderflowProtection) {
+	setupCleanCPU();
+	Instruction_t instr;
+	
+	address stackTop = 410;
+	
+	CPU.RL = stackTop;
+	CPU.SP = stackTop;
+	
+	instr.opCode = OP_POP;
+
+	InstructionStatus_t status = executeStackManipulation(instr);
+	
+	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
+	ASSERT_EQ(stackTop, CPU.SP);
+}
