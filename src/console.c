@@ -56,7 +56,7 @@ static void printFullRegisters(void) {
 	printf("---------------------------------------------\n");
 	printf(" RB:  %08d | RL:  %08d\n", CPU.RB, CPU.RL);
 	printf(" SP:  %08d | RX:  %08d\n", CPU.SP, CPU.RX);
-	printf(" Int: %s      | CC: %d | PSW Mode: %s\n",
+	printf(" Int: %s      | CC:  %d | PSW Mode: %s\n",
 	       (CPU.PSW.interruptEnable) ? "ON " : "OFF",
 	       CPU.PSW.conditionCode,
 	       (CPU.PSW.mode == MODE_KERNEL) ? "KERNEL" : "USER");
@@ -66,10 +66,10 @@ static void printFullRegisters(void) {
 
 static void printCommandList(void) {
 	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m\n");
-	printf("  \x1b[1mRUN <file>\x1b[0m         : Execute program in Normal Mode\n");
-	printf("  \x1b[1mDEBUG <file>\x1b[0m       : Execute program in Debug Mode\n");
-	printf("  \x1b[1mEXIT\x1b[0m        : Shutdown the system\n");
-	printf("  \x1b[1mCOMANDS\x1b[0m     : Show this list\n\n");
+	printf("  \x1b[1mRUN <file>\x1b[0m     : Execute program in Normal Mode\n");
+	printf("  \x1b[1mDEBUG <file>\x1b[0m   : Execute program in Debug Mode\n");
+	printf("  \x1b[1mEXIT\x1b[0m           : Shutdown the system\n");
+	printf("  \x1b[1mCOMANDS\x1b[0m        : Show this list\n\n");
 }
 
 
