@@ -104,62 +104,86 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	InstructionStatus_t ret;
 	Instruction_t instruction;
 
-	// Test for sum
+	// Test for sum: 5 + 10 = 15
 	setupCleanCPU();
 	CPU.AC = 5;
-	CPU.IR = 100010; // SUM Immediate 10
-	instruction = decode();
-	ret = executeArithmetic(instruction); // 5 + 10
+	instruction.opCode = OP_SUM;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 10;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(15, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
-	// Test for subtraction
+	// Test for subtraction: 5 - 10 = -5
 	setupCleanCPU();
 	CPU.AC = 5;
-	CPU.IR = 1100010; // RES Immediate 10
-	instruction = decode();
-	ret = executeArithmetic(instruction); // 5 - 10
+	instruction.opCode = OP_RES;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 10;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(SIGN_BIT + 5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_NEG, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 	
+	// Test for subtraction with Direct Address: -5 - (-10) = 5
 	setupCleanCPU();
 	CPU.AC = SIGN_BIT + 5; // -5
 	writeMemory(300, intToWord(-10, &CPU.PSW)); // RAM[300] = -10
-	CPU.IR = 1000300; // RES Direct RAM[300]
-	instruction = decode();
-	ret = executeArithmetic(instruction); // -5 - (-10)
+	
+	instruction.opCode = OP_RES;
+	instruction.direction = DIR_DIRECT;
+	instruction.value = 300;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
-	// Test for multiplication
+	// Test for multiplication: -2 * -3 = 6
 	setupCleanCPU();
 	CPU.AC = SIGN_BIT + 2;
 	writeMemory(300, intToWord(-3, &CPU.PSW)); // RAM[300] = -3
-	CPU.IR = 2000300; // MULT Direct RAM[300]
-	instruction = decode();
-	ret = executeArithmetic(instruction); // -2 * -3
+	
+	instruction.opCode = OP_MULT;
+	instruction.direction = DIR_DIRECT;
+	instruction.value = 300;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(6, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
-	// Test for division
+	// Test for division: 20 / 4 = 5
 	setupCleanCPU();
 	CPU.AC = 20;
-	CPU.IR = 3100004; // DIVI Immediate 4
-	instruction = decode();
-	ret = executeArithmetic(instruction); // 20 / 4 = 5
+	
+	instruction.opCode = OP_DIVI;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 4;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
+	// Test for integer division: 5 / 2 = 2
 	setupCleanCPU();
 	CPU.AC = 5;
-	CPU.IR = 3100002; // DIVI Immediate 2
-	instruction = decode();
-	ret = executeArithmetic(instruction); // 5 / 2 = 2.5 -> 2
+	
+	instruction.opCode = OP_DIVI;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 2;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(2, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
@@ -167,10 +191,14 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	// Overflow test for addition
 	setupCleanCPU();
 	CPU.AC = MAX_MAGNITUDE;
-	CPU.IR = 100001; // 00100001 SUM Immediate 1
-	instruction = decode();
+	
+	instruction.opCode = OP_SUM;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 1;
+
 	ret = executeArithmetic(instruction);
-	ASSERT_EQ(0, CPU.AC); // We wait for truncation to 0 (10000000 % 10000000) and flag
+	
+	ASSERT_EQ(0, CPU.AC);
 	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 }
@@ -181,9 +209,13 @@ UTEST(CPU_ALU, ExecuteArithmeticDivByZero) {
 
 	setupCleanCPU();
 	CPU.AC = 10;
-	CPU.IR = 3100000; // DIVI Immediate 0
-	instruction = decode();
+	
+	instruction.opCode = OP_DIVI;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 0;
+
 	InstructionStatus_t ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(10, CPU.AC);
 	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
@@ -195,11 +227,15 @@ UTEST(CPU_ALU, ExecuteNonArithmeticOperation){
 
 	setupCleanCPU();
 	CPU.AC = 5;
-	CPU.IR = 8000005; // COMP Immediate 5
-	instruction = decode();
+	
+	instruction.opCode = OP_COMP;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 5;
+
 	InstructionStatus_t status = executeArithmetic(instruction);
+	
 	ASSERT_EQ(5, CPU.AC);
-	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
+	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode); 
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
 }
 
