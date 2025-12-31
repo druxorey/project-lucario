@@ -27,8 +27,8 @@ void raiseInterrupt(InterruptCode_t code) {
 }
 
 
-int wordToInt(word w) {
-	return (IS_NEGATIVE(w))? -((int)GET_MAGNITUDE(w)): (int)GET_MAGNITUDE(w);
+int wordToInt(word wordValue) {
+	return (IS_NEGATIVE(wordValue))? -((int)GET_MAGNITUDE(wordValue)): (int)GET_MAGNITUDE(wordValue);
 }
 
 
@@ -57,21 +57,21 @@ word intToWord(int intValue, PSW_t* psw) {
 }
 
 
-address calculateEffectiveAddress(Instruction_t instr) {
-	if (instr.direction == DIR_INDEXED) {
-		return instr.value + wordToInt(CPU.AC);
+address calculateEffectiveAddress(Instruction_t instruction) {
+	if (instruction.direction == DIR_INDEXED) {
+		return instruction.value + wordToInt(CPU.AC);
 	}
-	return instr.value;
+	return instruction.value;
 }
 
 
-InstructionStatus_t fetchOperand(Instruction_t instr, word *outValue) {
+InstructionStatus_t fetchOperand(Instruction_t instruction, word *outValue) {
 	MemoryStatus_t ret = MEM_SUCCESS;
 
-	if (instr.direction == DIR_IMMEDIATE) {
-		*outValue = intToWord(instr.value, &CPU.PSW);
-	} else if (instr.direction == DIR_DIRECT || instr.direction == DIR_INDEXED) {
-		address addr = calculateEffectiveAddress(instr);
+	if (instruction.direction == DIR_IMMEDIATE) {
+		*outValue = intToWord(instruction.value, &CPU.PSW);
+	} else if (instruction.direction == DIR_DIRECT || instruction.direction == DIR_INDEXED) {
+		address addr = calculateEffectiveAddress(instruction);
 		ret = readMemory(addr, outValue);
 	} else {
 		raiseInterrupt(IC_INVALID_INSTR);
@@ -120,23 +120,23 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 }
 
 
-InstructionStatus_t executeDataMovement(Instruction_t instr) {
+InstructionStatus_t executeDataMovement(Instruction_t instruction) {
 	InstructionStatus_t status;
 	MemoryStatus_t ret = MEM_SUCCESS;
 
-	switch (instr.opCode) {
+	switch (instruction.opCode) {
 		case OP_STR: {
-			if (instr.direction == DIR_IMMEDIATE) {
+			if (instruction.direction == DIR_IMMEDIATE) {
 				raiseInterrupt(IC_INVALID_INSTR);
 				return INSTR_EXEC_FAIL;
 			}
-			address effectiveAddr = calculateEffectiveAddress(instr);
+			address effectiveAddr = calculateEffectiveAddress(instruction);
 			ret = writeMemory(effectiveAddr, CPU.AC);
 			break;
 		}
 		case OP_LOAD: {
 			word data;
-			status = fetchOperand(instr, &data);
+			status = fetchOperand(instruction, &data);
 			CPU.AC = data;
 			updatePSWFlags();
 			break;
@@ -256,6 +256,39 @@ InstructionStatus_t executeComparison(Instruction_t instruction) {
 	return INSTR_EXEC_SUCCESS;
 }
 
+InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
+
+	if (instruction.opCode == OP_PSH) {
+		if (CPU.SP - 1 < CPU.RX) {
+			raiseInterrupt(IC_INVALID_ADDR);
+			return INSTR_EXEC_FAIL;
+		}
+		CPU.SP -= 1;
+		if (writeMemory(CPU.SP, CPU.AC) != MEM_SUCCESS) {
+			raiseInterrupt(IC_INVALID_ADDR);
+			return INSTR_EXEC_FAIL;
+		}
+	} else if (instruction.opCode == OP_POP) {
+		if (CPU.SP  >= CPU.RL) {
+			raiseInterrupt(IC_INVALID_ADDR);
+			return INSTR_EXEC_FAIL;
+		}
+		word data;
+		if (readMemory(CPU.SP, &data) != MEM_SUCCESS) {
+			raiseInterrupt(IC_INVALID_ADDR);
+			return INSTR_EXEC_FAIL;
+		}
+		CPU.AC = data;
+		updatePSWFlags();
+		CPU.SP += 1;
+	} else {
+		raiseInterrupt(IC_INVALID_INSTR);
+		return INSTR_EXEC_FAIL;
+	}
+
+	return  INSTR_EXEC_SUCCESS;
+}
+
 
 CPUStatus_t executeSystemCall(void) {
 	int syscallCode = wordToInt(CPU.AC);
@@ -357,10 +390,10 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeDataMovement(instruction);
 			return checkStatus(status);
 		case OP_PSH:
-			// Implementation
+			status = executeStackManipulation(instruction);
 			return checkStatus(status);
 		case OP_POP:
-			// Implementation
+			status = executeStackManipulation(instruction);
 			return checkStatus(status);
 		case OP_J:
 			status = executeBranching(instruction);

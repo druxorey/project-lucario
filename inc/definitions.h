@@ -13,18 +13,20 @@
 
 #include <pthread.h>
 
-#define RAM_SIZE         2000      /** Main memory size in words. */
-#define OS_RESERVED_SIZE 300       /** Memory space reserved for the Operating System. */
-#define DISK_TRACKS      10        /** Virtual Hard Disk geometry: number of tracks. */
-#define DISK_CYLINDERS   10        /** Virtual Hard Disk geometry: number of cylinders. */
-#define DISK_SECTORS     100       /** Virtual Hard Disk geometry: number of sectors. */
-#define SECTOR_SIZE      9         /** Logical sector size. It represents 9 logical characters. */
-#define MAX_MAGNITUDE    9999999   /** Maximum allowed magnitude (7 digits). */
-#define MIN_MAGNITUDE    0         /** Minimum allowed magnitude. */
-#define LOG_BUFFER_SIZE  512       /** Log buffer size for debug output. */
+#define RAM_SIZE           2000      /** Main memory size in words. */
+#define OS_RESERVED_SIZE   300       /** Memory space reserved for the Operating System. */
+#define DISK_TRACKS        10        /** Virtual Hard Disk geometry: number of tracks. */
+#define DISK_CYLINDERS     10        /** Virtual Hard Disk geometry: number of cylinders. */
+#define DISK_SECTORS       100       /** Virtual Hard Disk geometry: number of sectors. */
+#define SECTOR_SIZE        9         /** Logical sector size. It represents 9 logical characters. */
+#define MAX_MAGNITUDE      9999999   /** Maximum allowed magnitude (7 digits). */
+#define MIN_MAGNITUDE      0         /** Minimum allowed magnitude. */
+#define LOG_BUFFER_SIZE    512       /** Log buffer size for debug output. */
+#define DEFAULT_STACK_SIZE 100       /** Default stack size for user programs. */
+#define MIN_STACK_SIZE     50        /** Minimum stack size for user programs. */
 
-typedef int word;                  /** Represents an 8-decimal digit machine word. (SMMMMMMM S=Sign, M=Magnitude). */
-typedef int address;               /** Represents a memory address (index 0-1999). */
+typedef int word;                    /** Represents an 8-decimal digit machine word. (SMMMMMMM S=Sign, M=Magnitude). */
+typedef int address;                 /** Represents a memory address (index 0-1999). */
 
 /**
  * @brief PSW Condition Codes.
