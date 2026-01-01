@@ -179,6 +179,7 @@ typedef struct {
 #define GET_MAGNITUDE(w)          ((w) % SIGN_BIT)                     /**< @brief Gets only the magnitude (the lower 7 digits). */
 #define MAX_WORD_VALUE            (SIGN_BIT + MAX_MAGNITUDE)           /**< @brief Maximum valid word value (19999999). */
 #define IS_VALID_WORD(w)          ((w) >= 0 && (w) <= MAX_WORD_VALUE)  /**< @brief Validates if a word is within the allowed range. */
+#define IS_VALID_INSTRUCTION(w)   ((GET_INSTRUCTION_OPCODE(w) >= 0) && (GET_INSTRUCTION_OPCODE(w) <= OP_SDMAON)) /**< @brief Validates if an instruction OpCode is valid. */
 
 extern word RAM[RAM_SIZE];                                        /**< @brief Shared Main Memory (RAM). */
 extern CPU_t CPU;                                                 /**< @brief Global Processor Instance. */
