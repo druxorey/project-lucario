@@ -87,9 +87,6 @@ address calculateEffectiveAddress(Instruction_t instr);
  *
  * Handles logic for SUM, RES, MULT, and DIVI. It updates the Accumulator (AC)
  * and the Condition Codes in the PSW.
- *
- * @param op The arithmetic operation code (OP_SUM, OP_RES, etc.).
- * @param operandValue The resolved integer value of the operand (not the address).
  */
 InstructionStatus_t executeArithmetic(Instruction_t instruction);
 
@@ -110,7 +107,14 @@ InstructionStatus_t executeBranching(Instruction_t instr);
  * Performs a subtraction (AC - Operand) to update flags, but discards result.
  * Covers OpCode: 08.
  */
-InstructionStatus_t executeComparison(Instruction_t instruction);
+InstructionStatus_t executeComparison(Instruction_t instr);
+
+/**
+ * @brief Handles DMA-related instructions (SDMAP, SDMAC, SDMAON, etc.).
+ * Updates DMA controller state and initiates transfers as needed.
+ * Covers OpCodes: 28-33.
+ */
+InstructionStatus_t executeDMAInstruction(Instruction_t instr);
 
 /**
  * @brief Executes the Fetch phase of the instruction cycle.
