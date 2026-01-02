@@ -824,15 +824,14 @@ UTEST(CPU_Stack, LoadAndStoreSP) {
 	Instruction_t instr;
 	InstructionStatus_t status;
 	word initialSp = 1500;
+	word value = 12;
 	
 	// Store initial SP value (AC -> SP)
-	CPU.AC = initialSp;
-	CPU.SP = 0;
+	CPU.AC = value;
+	CPU.SP = initialSp;
 	instr.opCode = OP_STRSP;
 	
 	status = executeDataMovement(instr);
-	
-	ASSERT_EQ(initialSp, CPU.SP);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
 	// Load SP value into AC (SP -> AC)
@@ -840,8 +839,7 @@ UTEST(CPU_Stack, LoadAndStoreSP) {
 	instr.opCode = OP_LOADSP;
 	
 	status = executeDataMovement(instr);
-	
-	ASSERT_EQ(initialSp, CPU.AC);
+	ASSERT_EQ(value, CPU.AC);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 }
 
@@ -849,52 +847,66 @@ UTEST(CPU_Stack, LoadAndStoreSP) {
 UTEST(CPU_Stack, PushOperation) {
 	setupCleanCPU();
 	Instruction_t instr;
+	InstructionStatus_t status;
 	
-	address codeEnd = 310;
 	address stackTop = 410;
 	word dataToPush = 999;
 	word writtenValue = 0;
 
 	CPU.RB = 300;
 	CPU.RL = stackTop;
-	CPU.RX = codeEnd;
+	CPU.RX = 310;
 	CPU.SP = stackTop;
 	CPU.AC = dataToPush;
 
-	instr.opCode = OP_PSH;
+	// Store the data at the current SP position (410)
+	instr.opCode = OP_STRSP;
+	status = executeDataMovement(instr);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 
-	InstructionStatus_t status = executeStackManipulation(instr);
+	// Push (decrement) the Stack Pointer
+	instr.opCode = OP_PSH;
+	status = executeStackManipulation(instr); 
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 	
+	// The SP should have moved down by 1 (410 -> 409)
 	ASSERT_EQ(stackTop - 1, CPU.SP);
 	
-	readMemory(CPU.SP, &writtenValue);
+	// The data should remain at the OLD SP location (410)
+	// We read directly from memory to verify persistence
+	readMemory(stackTop, &writtenValue);
 	ASSERT_EQ(dataToPush, writtenValue);
-	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
 }
 
 // Verify pop operation from the stack
 UTEST(CPU_Stack, PopOperation) {
 	setupCleanCPU();
 	Instruction_t instr;
+	InstructionStatus_t status;
 	
 	address stackTop = 410;
-	address currentSP = 409;
+	address currentSP = 409; // Simulating we are one step deep
 	word dataInStack = 888;
 	
-	writeMemory(currentSP, dataInStack);
+	// Manually put data where the stack was before
+	writeMemory(stackTop, dataInStack);
 
-	CPU.RB = 300;
-	CPU.RL = stackTop;
+	CPU.RB = 0;
+	CPU.RL = 500;
 	CPU.SP = currentSP;
 	CPU.AC = 0;
 
+	// Pop (increment) the Stack Pointer back to data location
 	instr.opCode = OP_POP;
-
-	InstructionStatus_t status = executeStackManipulation(instr);
-	
-	ASSERT_EQ(dataInStack, CPU.AC);
-	ASSERT_EQ(stackTop, CPU.SP);
+	status = executeStackManipulation(instr);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+	ASSERT_EQ(stackTop, CPU.SP);
+
+	// Load the data from SP into AC
+	instr.opCode = OP_LOADSP;
+	status = executeDataMovement(instr);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+	ASSERT_EQ(dataInStack, CPU.AC);
 }
 
 // Verify stack overflow protection (colliding with code segment)
@@ -904,17 +916,19 @@ UTEST(CPU_Stack, StackOverflowProtection) {
 	
 	address codeEnd = 310;
 	
+	CPU.RB = 300;
 	CPU.RX = codeEnd;
 	CPU.SP = codeEnd;
 	CPU.AC = 123;
 
-	// We try to PUSH. It should try to write at 309,
-	// which is code area (or out of assigned stack limit).
+	// We try to PUSH. Logic: New SP would be (310 - 1) = 309.
+	// 309 < RX (310), so it enters protected code area.
 	instr.opCode = OP_PSH;
 
 	InstructionStatus_t status = executeStackManipulation(instr);
-	
+	// Should fail due to overflow/protection violation
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
+	// SP should not have changed
 	ASSERT_EQ(codeEnd, CPU.SP);
 }
 
@@ -923,15 +937,18 @@ UTEST(CPU_Stack, StackUnderflowProtection) {
 	setupCleanCPU();
 	Instruction_t instr;
 	
-	address stackTop = 410;
+	address stackLimit = 500; // RL
 	
-	CPU.RL = stackTop;
-	CPU.SP = stackTop;
+	CPU.RL = stackLimit;
+	CPU.SP = stackLimit; // Stack is empty (at top)
 	
+	// We try to POP. Logic: New SP would be (500 + 1) = 501.
+	// 501 > RL (500), so it exceeds stack segment.
 	instr.opCode = OP_POP;
 
 	InstructionStatus_t status = executeStackManipulation(instr);
-	
+	// Should fail due to underflow
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
-	ASSERT_EQ(stackTop, CPU.SP);
+	// SP should not have changed
+	ASSERT_EQ(stackLimit, CPU.SP);
 }
