@@ -45,6 +45,7 @@ ProgramInfo_t loadProgram(char* filePath) {
 		loggerLog(LOG_INFO, logBuffer);
 
 		CPU.PSW.mode = MODE_KERNEL;
+
 		loggerLog(LOG_INFO, "Loader: Switched to KERNEL MODE for memory injection.");
 
 		if (OS_RESERVED_SIZE + MIN_STACK_SIZE + programInfo.wordCount > RAM_SIZE) {
@@ -65,10 +66,12 @@ ProgramInfo_t loadProgram(char* filePath) {
 		printf("\x1b[36m[DEBUG]: Stack memory available: %d words\x1b[0m\n", stackMemory);
 		#endif
 
-		int processRequiredMemory = stackMemory + programInfo.wordCount;
-		
 		for (int i = 0 ; i < programInfo.wordCount; i++) {
 			word instruction = readProgramWord(programFile);
+
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: Read instruction %d for address %d\x1b[0m\n", instruction, OS_RESERVED_SIZE + i);
+			#endif
 
 			MemoryStatus_t ret = writeMemory(OS_RESERVED_SIZE + i, instruction);
 			
@@ -90,8 +93,8 @@ ProgramInfo_t loadProgram(char* filePath) {
 		snprintf(logBuffer, sizeof(logBuffer), "Loader: Context Set - RB: %d | RL: %d | PC: %d", CPU.RB, CPU.RL, CPU.PSW.pc);
 		loggerLog(LOG_INFO, logBuffer);
 
-		CPU.RX = OS_RESERVED_SIZE + programInfo.wordCount;
-		CPU.SP = CPU.RL;
+		CPU.RX = programInfo.wordCount;
+		CPU.SP = programInfo.wordCount + stackMemory;
 		snprintf(logBuffer, sizeof(logBuffer), "Loader: Stack Set - SP: %d | RX (Stack Base): %d", CPU.SP, CPU.RX);
 		loggerLog(LOG_INFO, logBuffer);
 
