@@ -159,6 +159,7 @@ typedef struct {
 	address memAddr;    /**< Target physical RAM address */
 	int status;         /**< Result: 0=Success, 1=Error */
 	bool active;        /**< Status flag: true if transfer is in progress */
+	bool pending; 		/**< Flag indicating a pending DMA request */
 } DMA_t;
 
 /**

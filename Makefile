@@ -19,6 +19,7 @@ DEPS_definitions =
 DEPS_loader = $(OBJ_DIR)/loader.o $(OBJ_DIR)/logger.o
 DEPS_logger = $(OBJ_DIR)/logger.o
 DEPS_memory = $(OBJ_DIR)/memory.o $(OBJ_DIR)/logger.o
+DEPS_dma = $(OBJ_DIR)/dma.o $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
 
 all: $(TARGET)
 	@echo -e "\e[1;32m[SUCCESS]\e[0m Compiled in normal mode"

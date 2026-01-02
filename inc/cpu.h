@@ -6,7 +6,7 @@
  * instruction cycle (Fetch-Decode-Execute), ALU operations, and internal
  * data format conversions (Sign-Magnitude <-> Two's Complement).
  *
- * @version 1.0
+ * @version 1.1
  */
 
 #ifndef CPU_H

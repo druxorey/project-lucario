@@ -1,35 +1,65 @@
 #include <stdbool.h>
+#include <pthread.h>
+
 #include "../lib/utest.h"
 #include "../inc/dma.h"
-#include "../inc/memory.h"
 #include "../inc/cpu.h"
+#include "../inc/memory.h"
 
 DMA_t DMA;
 CPU_t CPU;
 word RAM[RAM_SIZE];
-Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS][SECTOR_SIZE];
+Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];
+pthread_mutex_t BUS_LOCK = PTHREAD_MUTEX_INITIALIZER;
 
-// Mock function for writing in memory
-MemoryStatus_t writeMemory(address addr, word value) {
-	if (addr >= OS_RESERVED_SIZE && addr < RAM_SIZE) {
-		RAM[addr] = value;
+static bool mockMemoryFailProtection = false;
+
+//Mock function for writing in memory
+MemoryStatus_t writeMemory(address addr, word data) {
+    pthread_mutex_lock(&BUS_LOCK);
+	if (mockMemoryFailProtection) {
+        pthread_mutex_unlock(&BUS_LOCK);
+		return MEM_ERR_PROTECTION;
+	}
+
+	if (addr >= 0 && addr < RAM_SIZE) {
+		RAM[addr] = data;
+        pthread_mutex_unlock(&BUS_LOCK);
 		return MEM_SUCCESS;
 	}
+
+    pthread_mutex_unlock(&BUS_LOCK);
+	return MEM_ERR_OUT_OF_BOUNDS;
+}
+
+// Mock for Read Memory
+MemoryStatus_t readMemory(address addr, word* outData) {
+	pthread_mutex_lock(&BUS_LOCK);
+
+	if (addr >= 0 && addr < RAM_SIZE) {
+		*outData = RAM[addr];
+        pthread_mutex_unlock(&BUS_LOCK);
+		return MEM_SUCCESS;
+	}
+
+	*outData = 0;
+
+	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_ERR_OUT_OF_BOUNDS;
 }
 
 UTEST_MAIN();
 
-UTEST(DMA, PlaceholderTest) {
-    // Placeholder test to ensure DMA module is included in the build.
-    ASSERT_TRUE(true);
-}
-
 UTEST(DMA, ExecuteSDMAOperations) {
     InstructionStatus_t ret;
     Instruction_t instruction;
+    
+    writeMemory(456, 1234567); // Preload memory at address 456
+    
+    pthread_t dmaThread;
+    pthread_create(&dmaThread, NULL, &dmaInit, NULL);
 
-    dmaReset();
+    usleep(100000); // Allow DMA thread to initialize
 
     // Test for set platter (SDMAP)
     cpuReset();
@@ -77,15 +107,18 @@ UTEST(DMA, ExecuteSDMAOperations) {
     ret = executeDMAInstruction(instruction);
     ASSERT_EQ(DMA.memAddr, 456); // DMA memory address set to 456
     ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
-        
+
     // Test for set operation on (SDMAON)
-    // Its tricky to test the active status, so we just check for a successful operation
     cpuReset();
-    writeMemory(456, 1234567); // Preload memory at address 456
-    CPU.IR = 33100001; // SDMAON Inmediate with value 1
+    CPU.IR = 33100001; // SDMAON Inmediate 1
     instruction = decode();
     ret = executeDMAInstruction(instruction);
     ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
-    ASSERT_EQ(DMA.status, 0); // DMA transfer status success
-    ASSERT_EQ(DISK[DMA.track][DMA.cylinder][DMA.sector], 1234567); // Word transferred to disk successfully
+
+    usleep(10000); // Allow some time for DMA operation to complete
+
+    ASSERT_FALSE(DMA.pending);
+    ASSERT_FALSE(DMA.active);
+    ASSERT_EQ(DMA.status, 0);
+    ASSERT_EQ((word)1234567, DISK[1][2][3].data);
 }

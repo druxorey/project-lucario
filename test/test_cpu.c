@@ -4,7 +4,10 @@
 #include "../inc/memory.h"
 
 CPU_t CPU;
+DMA_t DMA;
 word RAM[RAM_SIZE];
+
+pthread_cond_t DMA_COND = PTHREAD_COND_INITIALIZER;
 
 // Mock function for writing in memory
 MemoryStatus_t writeMemory(address addr, word value) {

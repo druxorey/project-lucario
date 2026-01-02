@@ -256,6 +256,70 @@ InstructionStatus_t executeComparison(Instruction_t instruction) {
 	return INSTR_EXEC_SUCCESS;
 }
 
+InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
+	word data;
+	InstructionStatus_t status = fetchOperand(instruction, &data);
+	int intData = wordToInt(data);
+
+	switch (instruction.opCode) {
+		case OP_SDMAP: {
+			if(intData < 0 || intData >= DISK_TRACKS) {
+				raiseInterrupt(IC_INVALID_INSTR);
+				return INSTR_EXEC_FAIL;
+			}
+			DMA.track = intData;
+			break;
+		}
+		case OP_SDMAC: {
+			if(intData < 0 || intData >= DISK_CYLINDERS) {
+				raiseInterrupt(IC_INVALID_INSTR);
+				return INSTR_EXEC_FAIL;
+			}
+			DMA.cylinder = intData;
+			break;
+		}
+		case OP_SDMAS: {
+			if(intData < 0 || intData >= DISK_SECTORS) {
+				raiseInterrupt(IC_INVALID_INSTR);
+				return INSTR_EXEC_FAIL;
+			}
+			DMA.sector = intData;
+			break;
+		}
+		case OP_SDMAIO: {
+			if(intData != 0 && intData != 1) {
+				raiseInterrupt(IC_INVALID_INSTR);
+				return INSTR_EXEC_FAIL;
+			}
+			DMA.ioDirection = intData;
+			break;
+		}
+		case OP_SDMAM: {
+			if(intData < 0 || intData >= RAM_SIZE) {
+				raiseInterrupt(IC_INVALID_INSTR);
+				return INSTR_EXEC_FAIL;
+			}
+			DMA.memAddr = intData;
+			break;
+		}
+		case OP_SDMAON: {
+			DMA.pending = true;
+			pthread_cond_signal(&DMA_COND);
+			break;
+		}
+		default:
+			raiseInterrupt(IC_INVALID_INSTR);
+			return INSTR_EXEC_FAIL;
+	}
+
+	if (status == INSTR_EXEC_FAIL) {
+		raiseInterrupt(IC_INVALID_ADDR);
+		return INSTR_EXEC_FAIL;
+	}
+
+	return INSTR_EXEC_SUCCESS;
+}
+
 
 CPUStatus_t executeSystemCall(void) {
 	int syscallCode = wordToInt(CPU.AC);
