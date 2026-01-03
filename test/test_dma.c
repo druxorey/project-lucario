@@ -53,6 +53,8 @@ UTEST_MAIN();
 UTEST(DMA, ExecuteSDMAOperations) {
     InstructionStatus_t ret;
     Instruction_t instruction;
+
+    dmaReset();
     
     writeMemory(456, 1234567); // Preload memory at address 456
     
@@ -121,4 +123,162 @@ UTEST(DMA, ExecuteSDMAOperations) {
     ASSERT_FALSE(DMA.active);
     ASSERT_EQ(DMA.status, 0);
     ASSERT_EQ((word)1234567, DISK[1][2][3].data);
+}
+
+UTEST(DMA, ExecuteInvalidSDMAOperations) {
+    InstructionStatus_t ret;
+    Instruction_t instruction;
+
+    dmaReset();
+
+    // Test for set platter (SDMAP)
+    cpuReset();
+    CPU.IR = 28100010; // SDMAP Inmediate with value 10 (Invalid track)
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ(DMA.track, 0); // DMA track still 0 due to invalid argument
+    ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
+    
+    // Test for set cylinder (SDMAC)
+    cpuReset();
+    CPU.IR = 29100010; // SDMAC Inmediate with value 10 (Invalid cylinder)
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ(DMA.cylinder, 0); // DMA cylinder still 0 due to invalid argument
+    ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
+        
+    // Test for set sector (SDMAS)
+    cpuReset();
+    CPU.IR = 30100100; // SDMAS Inmediate with value 100 (Invalid sector)
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ(DMA.sector, 0); // DMA sector still 0 due to invalid argument
+    ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
+        
+    // Test for set operation type (SDMAIO)
+    cpuReset();
+    CPU.IR = 31100003; // SDMAIO Inmediate with value 3 (Invalid I/O direction)
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ(DMA.ioDirection, 0); // DMA I/O direction still set to Read (0) due to invalid argument
+    ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
+
+    cpuReset();
+    CPU.IR = 31100001; // SDMAIO Inmediate with value 1
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ(DMA.ioDirection, 1); // DMA I/O direction set to Write (1)
+    ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
+
+    cpuReset();
+    CPU.IR = 31100003; // SDMAIO Inmediate with value 3 (Invalid I/O direction)
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ(DMA.ioDirection, 1); // DMA I/O direction still set to Write (1) due to invalid argument
+    ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
+        
+    // Test for set memory position (SDMAM)
+    cpuReset();
+    CPU.IR = 32102000; // SDMAM Inmediate with value 2000 (Invalid memory address)
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ(DMA.memAddr, 0); // DMA memory address still 0 due to invalid argument
+    ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
+
+    cpuReset();
+    CPU.IR = 32100299; // SDMAM Inmediate with value 299 (OS reserved memory address)
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ(DMA.memAddr, 0); // DMA memory address still 0 due to invalid argument
+    ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
+}
+
+//Test execution of non-DMA instructions with DMA execution function
+UTEST(DMA, ExecuteNonDMAInstruction) {
+    InstructionStatus_t ret;
+    Instruction_t instruction;
+
+    dmaReset();
+
+    // Test for non-DMA instruction (LOAD)
+    cpuReset();
+    CPU.IR = 10000456; // LOAD Inmediate with value 456
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
+}
+
+// Test execution of SDMAON when DMA is already active
+UTEST(DMA, ExecuteSDMAONWhenActive) {
+    InstructionStatus_t ret;
+    Instruction_t instruction;
+
+    dmaReset();
+    
+    writeMemory(456, 1234567); // Preload memory at address 456
+    writeMemory(789, 7654321); // Preload memory at address 789
+    
+    pthread_t dmaThread;
+    pthread_create(&dmaThread, NULL, &dmaInit, NULL);
+
+    usleep(100000); // Allow DMA thread to initialize
+
+    // Set up DMA parameters
+    cpuReset();
+    CPU.IR = 28100001; // SDMAP Inmediate with value 1
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+
+    cpuReset();
+    CPU.IR = 29100002; // SDMAC Inmediate with value 2
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+        
+    cpuReset();
+    CPU.IR = 30100003; // SDMAS Inmediate with value 3
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+        
+    cpuReset();
+    CPU.IR = 31100001; // SDMAIO Inmediate with value 1 (Write)
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+        
+    cpuReset();
+    CPU.IR = 32100456; // SDMAM Inmediate with value 456
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+
+    // Start DMA operation
+    cpuReset();
+    CPU.IR = 33100000; // SDMAON Inmediate 0
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
+    
+    // Attempt to set I/O direction again while DMA is active          
+    cpuReset();
+    CPU.IR = 31100000; // SDMAIO Inmediate with value 0 (Read)
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+
+    cpuReset();
+    CPU.IR = 32100789; // SDMAM Inmediate with value 789
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    
+    // Attempt to start DMA operation again while it's active
+    cpuReset();
+    CPU.IR = 33100000; // SDMAON Inmediate 0
+    instruction = decode();
+    ret = executeDMAInstruction(instruction);
+    ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret); // Should still succeed
+
+    usleep(10000); // Allow some time for DMA operation to complete
+
+    ASSERT_FALSE(DMA.pending);
+    ASSERT_FALSE(DMA.active);
+    ASSERT_EQ(DMA.status, 0);
+    ASSERT_EQ((word)1234567, DISK[1][2][3].data);
+    ASSERT_EQ((word)1234567, RAM[789]);
 }

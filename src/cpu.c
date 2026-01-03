@@ -295,7 +295,7 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 			break;
 		}
 		case OP_SDMAM: {
-			if(intData < 0 || intData >= RAM_SIZE) {
+			if(intData < OS_RESERVED_SIZE || intData >= RAM_SIZE) {
 				raiseInterrupt(IC_INVALID_INSTR);
 				return INSTR_EXEC_FAIL;
 			}
