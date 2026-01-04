@@ -16,6 +16,7 @@ DEPS_console = $(OBJ_DIR)/console.o $(OBJ_DIR)/logger.o
 DEPS_cpu = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
 DEPS_operations = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
 DEPS_definitions =
+DEPS_disk = $(OBJ_DIR)/disk.o $(OBJ_DIR)/logger.o
 DEPS_loader = $(OBJ_DIR)/loader.o $(OBJ_DIR)/logger.o
 DEPS_logger = $(OBJ_DIR)/logger.o
 DEPS_memory = $(OBJ_DIR)/memory.o $(OBJ_DIR)/logger.o

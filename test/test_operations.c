@@ -104,62 +104,86 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	InstructionStatus_t ret;
 	Instruction_t instruction;
 
-	// Test for sum
+	// Test for sum: 5 + 10 = 15
 	setupCleanCPU();
 	CPU.AC = 5;
-	CPU.IR = 100010; // SUM Immediate 10
-	instruction = decode();
-	ret = executeArithmetic(instruction); // 5 + 10
+	instruction.opCode = OP_SUM;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 10;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(15, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
-	// Test for subtraction
+	// Test for subtraction: 5 - 10 = -5
 	setupCleanCPU();
 	CPU.AC = 5;
-	CPU.IR = 1100010; // RES Immediate 10
-	instruction = decode();
-	ret = executeArithmetic(instruction); // 5 - 10
+	instruction.opCode = OP_RES;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 10;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(SIGN_BIT + 5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_NEG, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 	
+	// Test for subtraction with Direct Address: -5 - (-10) = 5
 	setupCleanCPU();
 	CPU.AC = SIGN_BIT + 5; // -5
 	writeMemory(300, intToWord(-10, &CPU.PSW)); // RAM[300] = -10
-	CPU.IR = 1000300; // RES Direct RAM[300]
-	instruction = decode();
-	ret = executeArithmetic(instruction); // -5 - (-10)
+	
+	instruction.opCode = OP_RES;
+	instruction.direction = DIR_DIRECT;
+	instruction.value = 300;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
-	// Test for multiplication
+	// Test for multiplication: -2 * -3 = 6
 	setupCleanCPU();
 	CPU.AC = SIGN_BIT + 2;
 	writeMemory(300, intToWord(-3, &CPU.PSW)); // RAM[300] = -3
-	CPU.IR = 2000300; // MULT Direct RAM[300]
-	instruction = decode();
-	ret = executeArithmetic(instruction); // -2 * -3
+	
+	instruction.opCode = OP_MULT;
+	instruction.direction = DIR_DIRECT;
+	instruction.value = 300;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(6, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
-	// Test for division
+	// Test for division: 20 / 4 = 5
 	setupCleanCPU();
 	CPU.AC = 20;
-	CPU.IR = 3100004; // DIVI Immediate 4
-	instruction = decode();
-	ret = executeArithmetic(instruction); // 20 / 4 = 5
+	
+	instruction.opCode = OP_DIVI;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 4;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(5, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
+	// Test for integer division: 5 / 2 = 2
 	setupCleanCPU();
 	CPU.AC = 5;
-	CPU.IR = 3100002; // DIVI Immediate 2
-	instruction = decode();
-	ret = executeArithmetic(instruction); // 5 / 2 = 2.5 -> 2
+	
+	instruction.opCode = OP_DIVI;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 2;
+
+	ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(2, CPU.AC);
 	ASSERT_EQ((unsigned)CC_POS, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
@@ -167,10 +191,14 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	// Overflow test for addition
 	setupCleanCPU();
 	CPU.AC = MAX_MAGNITUDE;
-	CPU.IR = 100001; // 00100001 SUM Immediate 1
-	instruction = decode();
+	
+	instruction.opCode = OP_SUM;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 1;
+
 	ret = executeArithmetic(instruction);
-	ASSERT_EQ(0, CPU.AC); // We wait for truncation to 0 (10000000 % 10000000) and flag
+	
+	ASSERT_EQ(0, CPU.AC);
 	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 }
@@ -181,9 +209,13 @@ UTEST(CPU_ALU, ExecuteArithmeticDivByZero) {
 
 	setupCleanCPU();
 	CPU.AC = 10;
-	CPU.IR = 3100000; // DIVI Immediate 0
-	instruction = decode();
+	
+	instruction.opCode = OP_DIVI;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 0;
+
 	InstructionStatus_t ret = executeArithmetic(instruction);
+	
 	ASSERT_EQ(10, CPU.AC);
 	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
@@ -195,11 +227,15 @@ UTEST(CPU_ALU, ExecuteNonArithmeticOperation){
 
 	setupCleanCPU();
 	CPU.AC = 5;
-	CPU.IR = 8000005; // COMP Immediate 5
-	instruction = decode();
+	
+	instruction.opCode = OP_COMP;
+	instruction.direction = DIR_IMMEDIATE;
+	instruction.value = 5;
+
 	InstructionStatus_t status = executeArithmetic(instruction);
+	
 	ASSERT_EQ(5, CPU.AC);
-	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode);
+	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode); 
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
 }
 
@@ -780,4 +816,139 @@ UTEST(CPU_Safety, HandleMemoryProtectionFault) {
 	//ASSERT_EQ((unsigned)IC_INVALID_ADDR, pendingInterruptCode);
 
 	mockMemoryFailProtection = false;
+}
+
+// Verify LOADSP and STRSP instructions for Stack Pointer (SP)
+UTEST(CPU_Stack, LoadAndStoreSP) {
+	setupCleanCPU();
+	Instruction_t instr;
+	InstructionStatus_t status;
+	word initialSp = 1500;
+	word value = 12;
+	
+	// Store initial SP value (AC -> SP)
+	CPU.AC = value;
+	CPU.SP = initialSp;
+	instr.opCode = OP_STRSP;
+	
+	status = executeDataMovement(instr);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+
+	// Load SP value into AC (SP -> AC)
+	CPU.AC = 0;
+	instr.opCode = OP_LOADSP;
+	
+	status = executeDataMovement(instr);
+	ASSERT_EQ(value, CPU.AC);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+}
+
+// Verify push operation onto the stack
+UTEST(CPU_Stack, PushOperation) {
+	setupCleanCPU();
+	Instruction_t instr;
+	InstructionStatus_t status;
+	
+	address stackTop = 410;
+	word dataToPush = 999;
+	word writtenValue = 0;
+
+	CPU.RB = 300;
+	CPU.RL = stackTop;
+	CPU.RX = 310;
+	CPU.SP = stackTop;
+	CPU.AC = dataToPush;
+
+	// Store the data at the current SP position (410)
+	instr.opCode = OP_STRSP;
+	status = executeDataMovement(instr);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+
+	// Push (decrement) the Stack Pointer
+	instr.opCode = OP_PSH;
+	status = executeStackManipulation(instr); 
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+	
+	// The SP should have moved down by 1 (410 -> 409)
+	ASSERT_EQ(stackTop - 1, CPU.SP);
+	
+	// The data should remain at the OLD SP location (410)
+	// We read directly from memory to verify persistence
+	readMemory(stackTop, &writtenValue);
+	ASSERT_EQ(dataToPush, writtenValue);
+}
+
+// Verify pop operation from the stack
+UTEST(CPU_Stack, PopOperation) {
+	setupCleanCPU();
+	Instruction_t instr;
+	InstructionStatus_t status;
+	
+	address stackTop = 410;
+	address currentSP = 409; // Simulating we are one step deep
+	word dataInStack = 888;
+	
+	// Manually put data where the stack was before
+	writeMemory(stackTop, dataInStack);
+
+	CPU.RB = 0;
+	CPU.RL = 500;
+	CPU.SP = currentSP;
+	CPU.AC = 0;
+
+	// Pop (increment) the Stack Pointer back to data location
+	instr.opCode = OP_POP;
+	status = executeStackManipulation(instr);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+	ASSERT_EQ(stackTop, CPU.SP);
+
+	// Load the data from SP into AC
+	instr.opCode = OP_LOADSP;
+	status = executeDataMovement(instr);
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, status);
+	ASSERT_EQ(dataInStack, CPU.AC);
+}
+
+// Verify stack overflow protection (colliding with code segment)
+UTEST(CPU_Stack, StackOverflowProtection) {
+	setupCleanCPU();
+	Instruction_t instr;
+	
+	address codeEnd = 310;
+	
+	CPU.RB = 300;
+	CPU.RX = codeEnd;
+	CPU.SP = codeEnd;
+	CPU.AC = 123;
+
+	// We try to PUSH. Logic: New SP would be (310 - 1) = 309.
+	// 309 < RX (310), so it enters protected code area.
+	instr.opCode = OP_PSH;
+
+	InstructionStatus_t status = executeStackManipulation(instr);
+	// Should fail due to overflow/protection violation
+	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
+	// SP should not have changed
+	ASSERT_EQ(codeEnd, CPU.SP);
+}
+
+// Verify stack underflow protection (popping from an empty stack)
+UTEST(CPU_Stack, StackUnderflowProtection) {
+	setupCleanCPU();
+	Instruction_t instr;
+	
+	address stackLimit = 500; // RL
+	
+	CPU.RL = stackLimit;
+	CPU.SP = stackLimit; // Stack is empty (at top)
+	
+	// We try to POP. Logic: New SP would be (500 + 1) = 501.
+	// 501 > RL (500), so it exceeds stack segment.
+	instr.opCode = OP_POP;
+
+	InstructionStatus_t status = executeStackManipulation(instr);
+	// Should fail due to underflow
+	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
+	// SP should not have changed
+	ASSERT_EQ(stackLimit, CPU.SP);
 }

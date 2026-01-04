@@ -89,9 +89,12 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 	char logBuffer[LOG_BUFFER_SIZE];
 	
 	pthread_mutex_lock(&BUS_LOCK);
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Attempting Mem WRITE: Logic[%d] = Val[%d]\x1b[0m\n", logicalAddr, data);
+	#endif
 
 	// Validate data structure (Sign bit + 7 magnitude digits)
-	if (!IS_VALID_WORD(data)) {
+	if (!IS_VALID_INSTRUCTION(data)) {
 		pthread_mutex_unlock(&BUS_LOCK);
 		loggerLog(LOG_ERROR, "Memory Data Error: ");
 		snprintf(logBuffer, sizeof(logBuffer), "Attempted to write invalid word [%d]. Max magnitude is 7 digits.", data);
