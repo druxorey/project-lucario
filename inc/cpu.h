@@ -137,7 +137,14 @@ InstructionStatus_t executeBranching(Instruction_t instruction);
  * @param instruction The decoded comparison instruction.
  * @return InstructionStatus_t Result of the execution (Success/Failure).
  */
-InstructionStatus_t executeComparison(Instruction_t instruction);
+InstructionStatus_t executeComparison(Instruction_t instr);
+
+/**
+ * @brief Handles DMA-related instructions (SDMAP, SDMAC, SDMAON, etc.).
+ * Updates DMA controller state and initiates transfers as needed.
+ * Covers OpCodes: 28-33.
+ */
+InstructionStatus_t executeDMAInstruction(Instruction_t instr);
 
 /**
  * @brief Handles Stack Manipulation instructions.

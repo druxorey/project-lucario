@@ -4,12 +4,18 @@
 #include "../inc/logger.h"
 #include "../inc/memory.h"
 #include "../inc/console.h"
+#include "../inc/dma.h"
 
 CPU_t CPU;
 
 int main() {
 	loggerInit();
 	memoryInit();
+
+	pthread_t dmaThread;
+    pthread_create(&dmaThread, NULL, &dmaInit, NULL);
+	pthread_detach(dmaThread);
+	
 	loggerLog(LOG_INFO, "System Boot sequence initiated");
 
 	ConsoleStatus_t consoleStatus = consoleStart();
