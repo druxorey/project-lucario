@@ -4,6 +4,7 @@
 #include <pthread.h>
 
 #include "../inc/dma.h"
+#include "../inc/cpu.h"
 #include "../inc/logger.h"
 #include "../inc/memory.h"
 
@@ -36,11 +37,12 @@ void *dmaInit(void*) {
         }
 
         pthread_mutex_lock(&BUS_LOCK);
+
         if (status != MEM_SUCCESS) {
             DMA.status = 1;
-            loggerLogInterrupt(IC_INVALID_ADDR);
+			raiseInterrupt(IC_INVALID_ADDR);
         } else {
-            loggerLogInterrupt(IC_IO_DONE);
+			raiseInterrupt(IC_IO_DONE);
         }
         DMA.active = false;
         DMA.pending = false;

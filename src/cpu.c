@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -326,8 +327,10 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 			break;
 		}
 		case OP_SDMAON: {
+			pthread_mutex_lock(&BUS_LOCK);
 			DMA.pending = true;
 			pthread_cond_signal(&DMA_COND);
+			pthread_mutex_unlock(&BUS_LOCK);
 			break;
 		}
 		default:
