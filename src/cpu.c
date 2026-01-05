@@ -21,6 +21,57 @@ static CPUStatus_t checkStatus(InstructionStatus_t status) {
 }
 
 
+static bool isInterruptHandled(void) {
+	if (!interruptPending) return true;
+
+	bool statusHandled = false;
+
+	switch (interruptPending) {
+	case IC_INVALID_SYSCALL:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	case IC_INVALID_INT_CODE:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	case IC_SYSCALL:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	case IC_TIMER:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	case IC_IO_DONE:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	case IC_INVALID_INSTR:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	case IC_INVALID_ADDR:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	case IC_UNDERFLOW:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	case IC_OVERFLOW:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	default:
+		// Handling rutine
+		statusHandled = true;
+		break;
+	}
+	return statusHandled;
+}
+
+
 void raiseInterrupt(InterruptCode_t code) {
 	loggerLogInterrupt(code);
 	interruptPending = true;
@@ -471,8 +522,6 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeDataMovement(instruction);
 			return checkStatus(status);
 		case OP_PSH:
-			status = executeStackManipulation(instruction);
-			return checkStatus(status);
 		case OP_POP:
 			status = executeStackManipulation(instruction);
 			return checkStatus(status);
@@ -480,22 +529,12 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeBranching(instruction);
 			return checkStatus(status);
 		case OP_SDMAP:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAC:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAS:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAIO:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAM:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAON:
-			// Implementation
+			status = executeDMAInstruction(instruction);
 			return checkStatus(status);
 		default:
 			loggerLogInterrupt(IC_INVALID_INSTR);
@@ -527,7 +566,7 @@ bool cpuStep(void) {
 	printf("\x1b[36m[DEBUG]: Completed CPU step. PC is now at %03d\x1b[0m\n", CPU.PSW.pc);
 	#endif
 
-	return true;
+	return isInterruptHandled();
 }
 
 
