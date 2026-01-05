@@ -344,6 +344,7 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 	}
 
 	return INSTR_EXEC_SUCCESS;
+}
 
   
 InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
