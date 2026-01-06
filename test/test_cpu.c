@@ -8,6 +8,7 @@ DMA_t DMA;
 word RAM[RAM_SIZE];
 
 pthread_cond_t DMA_COND = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t BUS_LOCK = PTHREAD_MUTEX_INITIALIZER;
 
 // Mock function for writing in memory
 MemoryStatus_t writeMemory(address addr, word value) {
