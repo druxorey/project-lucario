@@ -6,7 +6,7 @@
  * instruction cycle (Fetch-Decode-Execute), ALU operations, and internal
  * data format conversions (Sign-Magnitude <-> Two's Complement).
  *
- * @version 1.1
+ * @version 1.2
  */
 
 #ifndef CPU_H
@@ -46,6 +46,27 @@ typedef enum {
  * @param code The specific interrupt code to be raised.
  */
 void raiseInterrupt(InterruptCode_t code);
+
+/**
+ * @brief Checks and handles pending interrupts.
+ * 
+ * If interrupts are enabled and any are pending, this function processes them
+ * according to their priority, updating the CPU state as necessary.
+ * 
+ * @return bool True if execution can continue, False if a fatal interrupt occurred.
+ */
+bool checkInterrupts(void);
+
+/**
+ * @brief Handles a specific interrupt.
+ *
+ * Executes the necessary context switch and state updates for the given 
+ * interrupt code.
+ *
+ * @param code The interrupt code to handle.
+ * @return bool True if execution can continue after handling, False otherwise.
+ */
+bool handleInterrupt(InterruptCode_t code);
 
 /**
  * @brief Converts a Virtual Machine Word (Sign-Magnitude) to a C Integer.
@@ -107,6 +128,16 @@ address calculateEffectiveAddress(Instruction_t instruction);
 InstructionStatus_t executeArithmetic(Instruction_t instruction);
 
 /**
+ * @brief Handles Interrupt Enable/Disable instructions (HAB/DHAB).
+ *
+ * Updates the CPU's interrupt enable state based on the instruction.
+ *
+ * @param instruction The decoded interrupt control instruction.
+ * @return InstructionStatus_t Result of the execution (Success/Failure).
+ */
+InstructionStatus_t executeInterruptsChange(Instruction_t instruction);
+
+/**
  * @brief Handles Data Movement instructions.
  *
  * Manages instructions related to moving data between registers and memory, 
@@ -156,6 +187,15 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instr);
  * @return InstructionStatus_t Result of the execution (Success/Failure).
  */
 InstructionStatus_t executeStackManipulation(Instruction_t instruction);
+
+/**
+ * @brief Handles System Call instructions (SVC).
+ *
+ * Triggers an interrupt to request operating system services.
+ *
+ * @return InstructionStatus_t Result of the execution (Success/Failure).
+ */
+InstructionStatus_t executeSystemCall(void);
 
 /**
  * @brief Executes the Fetch phase of the instruction cycle.
