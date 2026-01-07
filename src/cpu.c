@@ -29,10 +29,18 @@ void raiseInterrupt(InterruptCode_t code) {
 }
 
 
+void raiseInterruptRelated(InterruptCode_t code, word* relatedWord) {
+    loggerLogInterrupt(code);
+	interruptBitmap |= (1 << code); 
+	interruptWord = relatedWord;
+}
+
+
 bool checkInterrupts(void) {
     if (interruptBitmap == 0 || CPU.PSW.interruptEnable == ITR_DISABLED) return true;
 
     InterruptCode_t codeToHandle = -1;
+	bool status = false;
 
 	// Instruction ordered by priority
     if      (interruptBitmap & (1 << IC_INVALID_INSTR)) 	codeToHandle = IC_INVALID_INSTR;
@@ -46,10 +54,11 @@ bool checkInterrupts(void) {
 	else 												 	codeToHandle = IC_INVALID_INT_CODE;
 
     if (codeToHandle != -1) {
-        return handleInterrupt(codeToHandle);
+        status = handleInterrupt(codeToHandle);
         interruptBitmap &= ~(1 << codeToHandle); 
     }
-	return false;
+
+	return status;
 }
 
 
@@ -70,7 +79,7 @@ bool handleInterrupt(InterruptCode_t code) {
 			*interruptWord = intToWord(intValue % (MAX_MAGNITUDE + 1), &CPU.PSW);
 			interruptWord = NULL;
 			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Overflow detected. Adjusting value - Previous: %d, New: %d\x1b[0m\n", intValue, wordToInt(*interruptWord, &CPU.PSW));
+			printf("\x1b[36m[DEBUG]: Overflow detected. Adjusting value - Previous: %d, New: %d\x1b[0m\n", intValue, wordToInt(*interruptWord));
 			#endif
 			return true; 		// Continue program execution
 		case IC_UNDERFLOW:
@@ -207,8 +216,7 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 			return INSTR_EXEC_FAIL;
 	}
 	if (CPU.PSW.conditionCode == CC_OVERFLOW) {
-		raiseInterrupt(IC_OVERFLOW);
-		interruptWord = &CPU.AC;
+		raiseInterruptRelated(IC_OVERFLOW, &CPU.AC);
 	}
 	return INSTR_EXEC_SUCCESS;
 }
@@ -486,6 +494,19 @@ InstructionStatus_t executeSystemCall(void) {
 }
 
 
+InstructionStatus_t executeReturn(void) {
+	word returnAddress;
+	MemoryStatus_t ret = readMemory(CPU.SP, &returnAddress);
+	if (ret != MEM_SUCCESS) {
+		raiseInterrupt(IC_INVALID_ADDR);
+		return INSTR_EXEC_FAIL;
+	}
+	CPU.PSW.pc = wordToInt(returnAddress);
+	CPU.SP += 1;
+	return INSTR_EXEC_SUCCESS;
+}
+
+
 CPUStatus_t fetch(void) {
 	CPU.MAR = CPU.PSW.pc;
 
@@ -546,7 +567,7 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeSystemCall();
 			return checkStatus(status);
 		case OP_RETRN:
-			// Implementation
+			status = executeReturn();
 			return checkStatus(status);
 		case OP_HAB:
 			status = executeInterruptsChange(instruction);
@@ -558,8 +579,15 @@ CPUStatus_t execute(Instruction_t instruction) {
 			// Implementation
 			return checkStatus(status);
 		case OP_CHMOD:
-			// Implementation
-			return checkStatus(status);
+			if (instruction.value == 0) {
+				CPU.PSW.mode = MODE_USER;
+			} else if (instruction.value == 1) {
+				CPU.PSW.mode = MODE_KERNEL;
+			} else {
+				raiseInterrupt(IC_INVALID_INSTR);
+				return CPU_STOP;
+			}
+			return CPU_OK;
 		case OP_LOADRB:
 		case OP_STRRB:
 		case OP_LOADRL:
@@ -584,7 +612,7 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeDMAInstruction(instruction);
 			return checkStatus(status);
 		default:
-			loggerLogInterrupt(IC_INVALID_INSTR);
+			raiseInterrupt(IC_INVALID_INSTR);
 			return CPU_STOP;
 	}
 }
@@ -607,11 +635,15 @@ bool cpuStep(void) {
 	printf("\x1b[36m[DEBUG]: Decoded instruction - Opcode: %02d, Mode: %01d, Value: %04d\x1b[0m\n", inst.opCode, inst.direction, inst.value);
 	#endif
 
-	if (execute(inst)) return false;
-
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Completed CPU step. PC is now at %03d\x1b[0m\n", CPU.PSW.pc);
-	#endif
+	if (execute(inst)) {
+		#ifdef DEBUG
+		printf("\x1b[36m[DEBUG]: Fatal error ocurred during execution stage. Executing interruption handler\x1b[0m\n");
+		#endif
+	} else {
+		#ifdef DEBUG
+		printf("\x1b[36m[DEBUG]: Completed CPU step. PC is now at %03d\x1b[0m\n", CPU.PSW.pc);
+		#endif
+	}
 
 	return checkInterrupts(); 
 }
@@ -629,4 +661,6 @@ int cpuRun(void) {
 
 void cpuReset(void) {
 	CPU = (CPU_t){0};
+	interruptBitmap = 0;
+	interruptWord = NULL;
 }

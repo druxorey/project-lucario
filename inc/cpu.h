@@ -6,7 +6,7 @@
  * instruction cycle (Fetch-Decode-Execute), ALU operations, and internal
  * data format conversions (Sign-Magnitude <-> Two's Complement).
  *
- * @version 1.2
+ * @version 1.3
  */
 
 #ifndef CPU_H
@@ -46,6 +46,18 @@ typedef enum {
  * @param code The specific interrupt code to be raised.
  */
 void raiseInterrupt(InterruptCode_t code);
+
+/**
+ * @brief Triggers a hardware interrupt with related data.
+ *
+ * Marks an interrupt as pending in the internal CPU state, associating it 
+ * with a specific word of data. The actual context switch and vector jump 
+ * will be handled by the control unit at the end of the current instruction cycle.
+ *
+ * @param code The specific interrupt code to be raised.
+ * @param relatedWord Pointer to the word associated with the interrupt.
+ */
+void raiseInterruptRelated(InterruptCode_t code, word* relatedWord);
 
 /**
  * @brief Checks and handles pending interrupts.
@@ -196,6 +208,16 @@ InstructionStatus_t executeStackManipulation(Instruction_t instruction);
  * @return InstructionStatus_t Result of the execution (Success/Failure).
  */
 InstructionStatus_t executeSystemCall(void);
+
+/**
+ * @brief Handles Return from System Call instructions (RETRN).
+ *
+ * Restores the CPU state after a system call, returning control to the 
+ * instruction following the SVC.
+ *
+ * @return InstructionStatus_t Result of the execution (Success/Failure).
+ */
+InstructionStatus_t executeReturn(void);
 
 /**
  * @brief Executes the Fetch phase of the instruction cycle.
