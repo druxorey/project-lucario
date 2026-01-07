@@ -143,6 +143,8 @@ typedef struct {
 	word RX;        /**< Index/Auxiliary Register */
 	word SP;        /**< Stack Pointer */
 	PSW_t PSW;      /**< Program Status Word */
+	unsigned int timerLimit; /**< Timer interval */
+	unsigned int cyclesCounter; /**< Current cycle count */
 } CPU_t;
 
 /** @brief Helper structure for instruction decoding. */

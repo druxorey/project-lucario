@@ -519,6 +519,8 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 	return INSTR_EXEC_SUCCESS;
 }
 
+}
+
   
 InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
 
@@ -699,7 +701,14 @@ bool cpuStep(void) {
 		#endif
 	}
 
-	return checkInterrupts();
+	CPU.cyclesCounter++;
+	if ((CPU.cyclesCounter >= CPU.timerLimit) && (CPU.timerLimit > 0)) {
+		CPU.cyclesCounter = 0;
+		raiseInterrupt(IC_TIMER);
+		// Call the interrupt handler
+	}
+  
+  return checkInterrupts();
 }
 
 
