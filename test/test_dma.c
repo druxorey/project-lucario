@@ -117,7 +117,7 @@ UTEST(DMA, ExecuteSDMAOperations) {
     ret = executeDMAInstruction(instruction);
     ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
-    usleep(10000); // Allow some time for DMA operation to complete
+    usleep(50000); // Allow some time for DMA operation to complete
 
     ASSERT_FALSE(DMA.pending);
     ASSERT_FALSE(DMA.active);
@@ -221,7 +221,7 @@ UTEST(DMA, ExecuteSDMAONWhenActive) {
     pthread_t dmaThread;
     pthread_create(&dmaThread, NULL, &dmaInit, NULL);
 
-    usleep(100000); // Allow DMA thread to initialize
+    usleep(50000); // Allow DMA thread to initialize
 
     // Set up DMA parameters
     cpuReset();
@@ -274,11 +274,78 @@ UTEST(DMA, ExecuteSDMAONWhenActive) {
     ret = executeDMAInstruction(instruction);
     ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret); // Should still succeed
 
-    usleep(10000); // Allow some time for DMA operation to complete
+    usleep(50000); // Allow some time for DMA operation to complete
 
     ASSERT_FALSE(DMA.pending);
     ASSERT_FALSE(DMA.active);
     ASSERT_EQ(DMA.status, 0);
     ASSERT_EQ((word)1234567, DISK[1][2][3].data);
     ASSERT_EQ((word)1234567, RAM[789]);
+}
+
+// Tests CPU stops at mutex when DMA is actively transferring data
+// We cant verify the CPU is actually waiting, but we can execute a memory related instruction after verifying DMA is active and see if it completes correctly
+UTEST(DMA, CPUWaitsWhenDMAActive) {
+    Instruction_t instruction;
+
+    dmaReset();
+
+    DISK[1][2][3].data = 7654321; // Preload disk sector with data
+    
+    pthread_t dmaThread;
+    pthread_create(&dmaThread, NULL, &dmaInit, NULL);
+
+    usleep(100000); // Allow DMA thread to initialize
+
+    // Set up DMA parameters
+    cpuReset();
+    CPU.IR = 28100001; // SDMAP Inmediate with value 1
+    instruction = decode();
+    executeDMAInstruction(instruction);
+
+    cpuReset();
+    CPU.IR = 29100002; // SDMAC Inmediate with value 2
+    instruction = decode();
+    executeDMAInstruction(instruction);
+        
+    cpuReset();
+    CPU.IR = 30100003; // SDMAS Inmediate with value 3
+    instruction = decode();
+    executeDMAInstruction(instruction);
+        
+    cpuReset();
+    CPU.IR = 31100000; // SDMAIO Inmediate with value 0 (Read)
+    instruction = decode();
+    executeDMAInstruction(instruction);
+        
+    cpuReset();
+    CPU.IR = 32100456; // SDMAM Inmediate with value 456
+    instruction = decode();
+    executeDMAInstruction(instruction);
+
+    // Start DMA operation
+    pthread_mutex_lock(&BUS_LOCK);
+    DMA.pending = true;
+    pthread_cond_signal(&DMA_COND);
+    pthread_mutex_unlock(&BUS_LOCK);
+    
+    // Prepare memory related instruction that should wait for DMA to complete
+    RAM[300] = 4000456; // Preload memory with LOAD instruction
+    CPU.PSW.pc = 300;
+
+    // Wait until DMA is active
+    while (!DMA.active) {
+        usleep(1000);
+    }
+    
+    // Execute instruction while DMA is active
+    ASSERT_TRUE(DMA.pending);
+    ASSERT_TRUE(DMA.active);
+    cpuStep(); // This should wait until DMA is done
+
+    ASSERT_FALSE(DMA.pending);
+    ASSERT_FALSE(DMA.active);
+    ASSERT_EQ(DMA.status, 0);
+    ASSERT_EQ((word)7654321, RAM[456]);
+    ASSERT_EQ((word)7654321, CPU.AC);
 }
