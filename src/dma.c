@@ -28,7 +28,7 @@ void *dmaInit(void*) {
         MemoryStatus_t status;
         if (DMA.ioDirection == 1) {
             pthread_mutex_unlock(&BUS_LOCK);
-            status = readMemory(DMA.memAddr, &data);
+            status = dmaReadMemory(DMA.memAddr, &data);
             pthread_mutex_lock(&BUS_LOCK);
             if (status == MEM_SUCCESS) {
                 DISK[DMA.track][DMA.cylinder][DMA.sector].data = data;
@@ -36,7 +36,7 @@ void *dmaInit(void*) {
         } else {
             data = DISK[DMA.track][DMA.cylinder][DMA.sector].data;
             pthread_mutex_unlock(&BUS_LOCK);
-            status = writeMemory(DMA.memAddr, data);
+            status = dmaWriteMemory(DMA.memAddr, data);
             pthread_mutex_lock(&BUS_LOCK);
         }
 

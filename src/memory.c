@@ -129,3 +129,40 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_SUCCESS;
 }
+
+
+MemoryStatus_t dmaReadMemory(address physAddr, word* outData) {
+    pthread_mutex_lock(&BUS_LOCK);
+
+    if (!isPhysicalAddressValid(physAddr)) {
+        pthread_mutex_unlock(&BUS_LOCK);
+        return MEM_ERR_OUT_OF_BOUNDS;
+    }
+
+    *outData = RAM[physAddr];
+
+    #ifdef DEBUG
+    printf("\x1b[35m[DMA]: Phys-Read at [%d] = %d\x1b[0m\n", physAddr, *outData);
+    #endif
+
+    pthread_mutex_unlock(&BUS_LOCK);
+    return MEM_SUCCESS;
+}
+
+MemoryStatus_t dmaWriteMemory(address physAddr, word data) {
+    pthread_mutex_lock(&BUS_LOCK);
+
+    if (!isPhysicalAddressValid(physAddr)) {
+        pthread_mutex_unlock(&BUS_LOCK);
+        return MEM_ERR_OUT_OF_BOUNDS;
+    }
+
+    RAM[physAddr] = data;
+
+    #ifdef DEBUG
+    printf("\x1b[35m[DMA]: Phys-Write at [%d] = %d\x1b[0m\n", physAddr, data);
+    #endif
+
+    pthread_mutex_unlock(&BUS_LOCK);
+    return MEM_SUCCESS;
+}

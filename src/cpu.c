@@ -489,13 +489,26 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 			break;
 		}
 		case OP_SDMAM: {
-			if(intData < OS_RESERVED_SIZE || intData >= RAM_SIZE) {
-				raiseInterrupt(IC_INVALID_INSTR);
-				return INSTR_EXEC_FAIL;
-			}
-			DMA.memAddr = intData;
-			break;
-		}
+            int physicalAddr;
+
+            if (CPU.PSW.mode == MODE_KERNEL) {
+                physicalAddr = intData;
+            } else {
+                physicalAddr = CPU.RB + intData;
+                if (physicalAddr > CPU.RL) {
+                    raiseInterrupt(IC_INVALID_ADDR);
+                    return INSTR_EXEC_FAIL;
+                }
+            }
+
+            if(physicalAddr < 0 || physicalAddr >= RAM_SIZE) {
+                raiseInterrupt(IC_INVALID_INSTR);
+                return INSTR_EXEC_FAIL;
+            }
+
+            DMA.memAddr = physicalAddr;
+            break;
+        }
 		case OP_SDMAON: {
 			pthread_mutex_lock(&BUS_LOCK);
 			DMA.pending = true;
@@ -517,8 +530,6 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 	}
 
 	return INSTR_EXEC_SUCCESS;
-}
-
 }
 
   

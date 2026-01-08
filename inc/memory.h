@@ -48,4 +48,16 @@ MemoryStatus_t readMemory(address logicalAddr, word* outData);
  */
 MemoryStatus_t writeMemory(address logicalAddr, word data);
 
+/**
+ * @brief Direct Physical Memory Read (Bypasses MMU protection).
+ * Used exclusively by DMA to access pre-validated physical addresses.
+ */
+MemoryStatus_t dmaReadMemory(address physAddr, word* outData);
+
+/**
+ * @brief Direct Physical Memory Write (Bypasses MMU protection).
+ * Used exclusively by DMA to write to pre-validated physical addresses.
+ */
+MemoryStatus_t dmaWriteMemory(address physAddr, word data);
+
 #endif // MEMORY_H
