@@ -1,12 +1,12 @@
-#include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <pthread.h>
 
 #include "../inc/dma.h"
 #include "../inc/cpu.h"
-#include "../inc/logger.h"
 #include "../inc/memory.h"
+
+DMA_t DMA;
 
 pthread_cond_t DMA_COND;
 
