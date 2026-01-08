@@ -4,7 +4,11 @@
 #include "../inc/memory.h"
 
 CPU_t CPU;
+DMA_t DMA;
 word RAM[RAM_SIZE];
+
+pthread_cond_t DMA_COND = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t BUS_LOCK = PTHREAD_MUTEX_INITIALIZER;
 
 static bool mockMemoryFailProtection = false;
 
@@ -235,7 +239,6 @@ UTEST(CPU_ALU, ExecuteNonArithmeticOperation){
 	InstructionStatus_t status = executeArithmetic(instruction);
 	
 	ASSERT_EQ(5, CPU.AC);
-	ASSERT_EQ((unsigned)CC_OVERFLOW, CPU.PSW.conditionCode); 
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
 }
 

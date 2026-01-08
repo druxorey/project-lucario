@@ -1,13 +1,15 @@
 #include <pthread.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <unistd.h>
 #include <stdbool.h>
 
 #include "../inc/logger.h"
 #include "../inc/cpu.h"
 #include "../inc/memory.h"
 
-static bool interruptPending = false;
-static InterruptCode_t pendingInterruptCode = 0;
+static uint16_t interruptBitmap = 0;
+static word *interruptWord = NULL;
 
 static void updatePSWFlags(void) {
 	if (CPU.AC == 0) CPU.PSW.conditionCode = CC_ZERO;
@@ -20,11 +22,165 @@ static CPUStatus_t checkStatus(InstructionStatus_t status) {
 	return CPU_OK;
 }
 
+static void internalPush(word value) {
+	CPU.SP -= 1;
+	
+	MemoryStatus_t status = writeMemory(CPU.SP, value);
+	
+	if (status != MEM_SUCCESS) {
+		#ifdef DEBUG
+		printf("\x1b[31m[CRITICAL]: Failed to push context (SP=%d). Error: %d\x1b[0m\n", CPU.SP, status);
+		#endif
+	}
+}
+
+static word internalPop(void) {
+	word value = 0;
+
+	MemoryStatus_t status = readMemory(CPU.SP, &value);
+	
+	if (status != MEM_SUCCESS) {
+		#ifdef DEBUG
+		printf("\x1b[31m[CRITICAL]: Failed to pop context (SP=%d). Error: %d\x1b[0m\n", CPU.SP, status);
+		#endif
+	}
+
+	CPU.SP += 1;
+	return value;
+}
+
+
+static void saveContext(void) {
+	internalPush(CPU.RX);
+	internalPush(CPU.RL);
+	internalPush(CPU.RB);
+	internalPush((word)CPU.PSW.mode);
+	internalPush((word)CPU.PSW.conditionCode);
+	internalPush(CPU.PSW.pc);
+	internalPush(CPU.AC);
+}
+
+static void restoreContext(InterruptCode_t codeHandled) {
+	word savedAC = internalPop();
+	
+	if (codeHandled != IC_OVERFLOW && codeHandled != IC_UNDERFLOW) {
+		CPU.AC = savedAC;
+	}
+
+	CPU.PSW.pc             = internalPop();
+	CPU.PSW.conditionCode  = (ConditionCode_t)internalPop();
+	CPU.PSW.mode           = (OpMode_t)internalPop();
+	CPU.RB                 = internalPop();
+	CPU.RL                 = internalPop();
+	CPU.RX                 = internalPop();
+}
 
 void raiseInterrupt(InterruptCode_t code) {
 	loggerLogInterrupt(code);
-	interruptPending = true;
-	pendingInterruptCode = code;
+	interruptBitmap |= (1 << code);
+}
+
+
+void raiseInterruptRelated(InterruptCode_t code, word* relatedWord) {
+	loggerLogInterrupt(code);
+	interruptBitmap |= (1 << code); 
+	interruptWord = relatedWord;
+}
+
+
+bool checkInterrupts(void) {
+	if (interruptBitmap == 0 || CPU.PSW.interruptEnable == ITR_DISABLED) return true;
+
+	InterruptCode_t codeToHandle = -1;
+	bool status = false;
+
+	// Instruction ordered by priority
+	if (interruptBitmap & (1 << IC_INVALID_INSTR))         codeToHandle = IC_INVALID_INSTR;
+	else if (interruptBitmap & (1 << IC_INVALID_ADDR))     codeToHandle = IC_INVALID_ADDR;
+	else if (interruptBitmap & (1 << IC_OVERFLOW))         codeToHandle = IC_OVERFLOW;
+	else if (interruptBitmap & (1 << IC_UNDERFLOW))        codeToHandle = IC_UNDERFLOW;
+	else if (interruptBitmap & (1 << IC_TIMER))            codeToHandle = IC_TIMER;
+	else if (interruptBitmap & (1 << IC_IO_DONE))          codeToHandle = IC_IO_DONE;
+	else if (interruptBitmap & (1 << IC_SYSCALL))          codeToHandle = IC_SYSCALL;
+	else if (interruptBitmap & (1 << IC_INVALID_SYSCALL))  codeToHandle = IC_INVALID_SYSCALL;
+	else                                                   codeToHandle = IC_INVALID_INT_CODE;
+
+	CPU.PSW.interruptEnable = ITR_DISABLED;
+	if (codeToHandle != -1) {
+		saveContext();
+		status = handleInterrupt(codeToHandle);
+		interruptBitmap &= ~(1 << codeToHandle);
+		if (status == true) {
+			restoreContext(codeToHandle);
+		}
+	}
+	CPU.PSW.interruptEnable = ITR_ENABLED;
+
+	return status;
+}
+
+
+bool handleInterrupt(InterruptCode_t code) {
+	switch (code) {
+		case IC_INVALID_INSTR:
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: Invalid Instruction. Aborting execution.\x1b[0m\n");
+			#endif
+			return false;
+		case IC_INVALID_ADDR:
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: Invalid Address. Aborting execution.\x1b[0m\n");
+			#endif
+			return false;
+		case IC_OVERFLOW:
+			int intValue = wordToInt(*interruptWord);
+			*interruptWord = intToWord(intValue % (MAX_MAGNITUDE + 1), &CPU.PSW);
+			interruptWord = NULL;
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: Overflow detected. Adjusting value - Previous: %d, New: %d\x1b[0m\n", intValue, wordToInt(*interruptWord));
+			#endif
+			return true;
+		case IC_UNDERFLOW:
+			*interruptWord = 0;
+			interruptWord = NULL;
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: Underflow detected. Adjusting value to 0\x1b[0m\n");
+			#endif
+			return true;
+		case IC_TIMER: // Simulate program pause
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: Timer interrupt triggered. Pausing program.\x1b[0m\n");
+			#endif
+			return true;
+		case IC_IO_DONE: // Simulate program resume after I/O completion
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: I/O operation completed. Resuming program.\x1b[0m\n");
+			#endif
+			return true;
+		case IC_SYSCALL:
+			int syscallCode = wordToInt(CPU.AC);
+			if (syscallCode == 0) {
+				printf("SYSTEM CALL [0]: Program requested termination (EXIT).\n");
+				return false;
+			} else {
+				// Any other code is considered a service request that does NOT stop the CPU
+				printf("SYSTEM CALL [%d]: Service handled (Simulation).\n", syscallCode);
+				// In the future an interrupt will be generated here, but the CPU does NOT stop,
+				// it simply continues to the next instruction after being serviced.
+				return true;
+			}
+		case IC_INVALID_SYSCALL:
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: Invalid System Call. Continuing execution.\x1b[0m\n");
+			#endif
+			return true;
+		case IC_INVALID_INT_CODE:
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: Invalid Interrupt Code. Continuing execution.\x1b[0m\n");
+			#endif
+			return true;
+	}
+	return false;
 }
 
 
@@ -42,7 +198,6 @@ word intToWord(int intValue, PSW_t* psw) {
 	if (magnitude > MAX_MAGNITUDE) {
 		psw->conditionCode = CC_OVERFLOW;
 		magnitude = magnitude % (MAX_MAGNITUDE + 1);
-		raiseInterrupt(IC_OVERFLOW);
 	} else {
 		if (intValue == 0) psw->conditionCode = CC_ZERO;
 		else if (isNegative) psw->conditionCode = CC_NEG;
@@ -114,8 +269,23 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 			break;
 		default:
 			raiseInterrupt(IC_INVALID_INSTR);
-			CPU.PSW.conditionCode = CC_OVERFLOW;
 			return INSTR_EXEC_FAIL;
+	}
+	if (CPU.PSW.conditionCode == CC_OVERFLOW) {
+		raiseInterruptRelated(IC_OVERFLOW, &CPU.AC);
+	}
+	return INSTR_EXEC_SUCCESS;
+}
+
+
+InstructionStatus_t executeInterruptsChange(Instruction_t instruction) {
+	if (instruction.opCode == OP_HAB) {
+		CPU.PSW.interruptEnable = ITR_ENABLED;
+	} else if (instruction.opCode == OP_DHAB) {
+		CPU.PSW.interruptEnable = ITR_DISABLED;
+	} else {
+		raiseInterrupt(IC_INVALID_INSTR);
+		return INSTR_EXEC_FAIL;
 	}
 	return INSTR_EXEC_SUCCESS;
 }
@@ -344,6 +514,9 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 			DMA.pending = true;
 			pthread_cond_signal(&DMA_COND);
 			pthread_mutex_unlock(&BUS_LOCK);
+			while (DMA.pending) {
+				usleep(1000); // Simulates blocked program state until DMA completes
+			}
 			break;
 		}
 		default:
@@ -357,7 +530,6 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 	}
 
 	return INSTR_EXEC_SUCCESS;
-
 }
 
   
@@ -385,21 +557,22 @@ InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
 }
 
 
-CPUStatus_t executeSystemCall(void) {
-	int syscallCode = wordToInt(CPU.AC);
-	// Temporary convention for Sprint 2:
-	// CPU_STOP = EXIT (End execution) (We will have to create a Enum later)
-	// Others = Simulate an operation (e.g. Print) and continue
-	if (syscallCode == 0) {
-		printf("SYSTEM CALL [0]: Program requested termination (EXIT).\n");
-		return CPU_STOP; // This will stop cpuRun()
-	} else {
-		// Any other code is considered a service request that does NOT stop the CPU
-		printf("SYSTEM CALL [%d]: Service handled (Simulation).\n", syscallCode);
-		// In the future an interrupt will be generated here, but the CPU does NOT stop,
-		// it simply continues to the next instruction after being serviced.
-		return CPU_OK;
+InstructionStatus_t executeSystemCall(void) {
+	raiseInterrupt(IC_SYSCALL);
+	return INSTR_EXEC_SUCCESS;
+}
+
+
+InstructionStatus_t executeReturn(void) {
+	word returnAddress;
+	MemoryStatus_t ret = readMemory(CPU.SP, &returnAddress);
+	if (ret != MEM_SUCCESS) {
+		raiseInterrupt(IC_INVALID_ADDR);
+		return INSTR_EXEC_FAIL;
 	}
+	CPU.PSW.pc = wordToInt(returnAddress);
+	CPU.SP += 1;
+	return INSTR_EXEC_SUCCESS;
 }
 
 
@@ -460,22 +633,28 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeBranching(instruction);
 			return checkStatus(status);
 		case OP_SVC:
-			return executeSystemCall();
+			status = executeSystemCall();
+			return checkStatus(status);
 		case OP_RETRN:
-			// Implementation
+			status = executeReturn();
 			return checkStatus(status);
 		case OP_HAB:
-			// Implementation
-			return checkStatus(status);
 		case OP_DHAB:
-			// Implementation
+			status = executeInterruptsChange(instruction);
 			return checkStatus(status);
 		case OP_TTI:
 			// Implementation
 			return checkStatus(status);
 		case OP_CHMOD:
-			// Implementation
-			return checkStatus(status);
+			if (instruction.value == 0) {
+				CPU.PSW.mode = MODE_USER;
+			} else if (instruction.value == 1) {
+				CPU.PSW.mode = MODE_KERNEL;
+			} else {
+				raiseInterrupt(IC_INVALID_INSTR);
+				return CPU_STOP;
+			}
+			return CPU_OK;
 		case OP_LOADRB:
 		case OP_STRRB:
 		case OP_LOADRL:
@@ -485,8 +664,6 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeDataMovement(instruction);
 			return checkStatus(status);
 		case OP_PSH:
-			status = executeStackManipulation(instruction);
-			return checkStatus(status);
 		case OP_POP:
 			status = executeStackManipulation(instruction);
 			return checkStatus(status);
@@ -494,25 +671,15 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeBranching(instruction);
 			return checkStatus(status);
 		case OP_SDMAP:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAC:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAS:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAIO:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAM:
-			// Implementation
-			return checkStatus(status);
 		case OP_SDMAON:
-			// Implementation
+			status = executeDMAInstruction(instruction);
 			return checkStatus(status);
 		default:
-			loggerLogInterrupt(IC_INVALID_INSTR);
+			raiseInterrupt(IC_INVALID_INSTR);
 			return CPU_STOP;
 	}
 }
@@ -535,12 +702,16 @@ bool cpuStep(void) {
 	printf("\x1b[36m[DEBUG]: Decoded instruction - Opcode: %02d, Mode: %01d, Value: %04d\x1b[0m\n", inst.opCode, inst.direction, inst.value);
 	#endif
 
-	if (execute(inst)) return false;
-
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Completed CPU step. PC is now at %03d\x1b[0m\n", CPU.PSW.pc);
-	#endif
-
+	if (execute(inst)) {
+		#ifdef DEBUG
+		printf("\x1b[36m[DEBUG]: Fatal error ocurred during execution stage. Executing interruption handler\x1b[0m\n");
+		#endif
+	} else {
+		#ifdef DEBUG
+		printf("\x1b[36m[DEBUG]: Completed CPU step. PC is now at %03d\x1b[0m\n", CPU.PSW.pc);
+		#endif
+	}
+  
 	CPU.cyclesCounter++;
 	if ((CPU.cyclesCounter >= CPU.timerLimit) && (CPU.timerLimit > 0)) {
 		CPU.cyclesCounter = 0;
@@ -548,7 +719,7 @@ bool cpuStep(void) {
 		// Call the interrupt handler
 	}
 
-	return true;
+	return checkInterrupts();
 }
 
 
@@ -564,4 +735,6 @@ int cpuRun(void) {
 
 void cpuReset(void) {
 	CPU = (CPU_t){0};
+	interruptBitmap = 0;
+	interruptWord = NULL;
 }

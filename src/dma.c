@@ -22,21 +22,24 @@ void *dmaInit(void*) {
 
         DMA.status = 0;
         DMA.active = true;
-        pthread_mutex_unlock(&BUS_LOCK);
-
+        usleep(10000); // Simulate search time
+        
         word data;
         MemoryStatus_t status;
         if (DMA.ioDirection == 1) {
+            pthread_mutex_unlock(&BUS_LOCK);
             status = dmaReadMemory(DMA.memAddr, &data);
+            pthread_mutex_lock(&BUS_LOCK);
             if (status == MEM_SUCCESS) {
                 DISK[DMA.track][DMA.cylinder][DMA.sector].data = data;
             }
         } else {
             data = DISK[DMA.track][DMA.cylinder][DMA.sector].data;
+            pthread_mutex_unlock(&BUS_LOCK);
             status = dmaWriteMemory(DMA.memAddr, data);
+            pthread_mutex_lock(&BUS_LOCK);
         }
 
-        pthread_mutex_lock(&BUS_LOCK);
 
         if (status != MEM_SUCCESS) {
             DMA.status = 1;
