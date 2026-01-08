@@ -5,7 +5,7 @@
  * This file declares the functions for reading from and writing to
  * a simulated disk.
  *
- * @version 2.0
+ * @version 2.1
  */
 
 #ifndef DISK_H
@@ -17,8 +17,8 @@
  * Replaces generic integers for better type safety and readability.
  */
 typedef enum {
-    DISK_SUCCESS           = 0, /**< Operation completed successfully. */
-    DISK_ERR_OUT_OF_BOUNDS = 1  /**< Disk Error: Track/Cylinder/Sector out of bounds. */
+	DISK_SUCCESS           = 0,  /**< Operation completed successfully. */
+	DISK_ERR_OUT_OF_BOUNDS = 1   /**< Disk Error: Track/Cylinder/Sector out of bounds. */
 } DiskStatus_t;
 
 /**
@@ -29,7 +29,7 @@ typedef enum {
  * @param sector The sector number to read from.
  * @param buffer Pointer to a Sector_t structure where the data will be stored.
  */
-DiskStatus_t readSector(int track, int cylinder, int sector, Sector_t* buffer);
+DiskStatus_t readSector(uint8_t track, uint8_t cylinder, uint8_t sector, Sector_t* buffer);
 
 
 /**
@@ -40,6 +40,6 @@ DiskStatus_t readSector(int track, int cylinder, int sector, Sector_t* buffer);
  * @param sector The sector number to write to.
  * @param data The Sector_t structure containing the data to write.
  */
-DiskStatus_t writeSector(int track, int cylinder, int sector, Sector_t data);
+DiskStatus_t writeSector(uint8_t track, uint8_t cylinder, uint8_t sector, Sector_t data);
 
 #endif // DISK_H
