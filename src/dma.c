@@ -27,13 +27,13 @@ void *dmaInit(void*) {
         word data;
         MemoryStatus_t status;
         if (DMA.ioDirection == 1) {
-            status = readMemory(DMA.memAddr, &data);
+            status = dmaReadMemory(DMA.memAddr, &data);
             if (status == MEM_SUCCESS) {
                 DISK[DMA.track][DMA.cylinder][DMA.sector].data = data;
             }
         } else {
             data = DISK[DMA.track][DMA.cylinder][DMA.sector].data;
-            status = writeMemory(DMA.memAddr, data);
+            status = dmaWriteMemory(DMA.memAddr, data);
         }
 
         pthread_mutex_lock(&BUS_LOCK);
