@@ -106,6 +106,7 @@ ProgramInfo_t loadProgram(char* filePath) {
 		CPU.cyclesCounter = 0;    
 
 		CPU.PSW.mode = MODE_USER;
+		CPU.PSW.interruptEnable = ITR_ENABLED;
 		programInfo.status = LOAD_SUCCESS;
 
 		fclose(programFile);
