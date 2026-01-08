@@ -214,7 +214,7 @@ word intToWord(int intValue, PSW_t* psw) {
 
 
 address calculateEffectiveAddress(Instruction_t instruction) {
-	if (instruction.direction == DIR_INDEXED) {
+	if (instruction.direction == ADDR_MODE_INDEXED) {
 		return instruction.value + wordToInt(CPU.AC);
 	}
 	return instruction.value;
@@ -224,9 +224,9 @@ address calculateEffectiveAddress(Instruction_t instruction) {
 InstructionStatus_t fetchOperand(Instruction_t instruction, word *outValue) {
 	MemoryStatus_t ret = MEM_SUCCESS;
 
-	if (instruction.direction == DIR_IMMEDIATE) {
+	if (instruction.direction == ADDR_MODE_IMMEDIATE) {
 		*outValue = intToWord(instruction.value, &CPU.PSW);
-	} else if (instruction.direction == DIR_DIRECT || instruction.direction == DIR_INDEXED) {
+	} else if (instruction.direction == ADDR_MODE_DIRECT || instruction.direction == ADDR_MODE_INDEXED) {
 		address addr = calculateEffectiveAddress(instruction);
 		ret = readMemory(addr, outValue);
 	} else {
@@ -297,7 +297,7 @@ InstructionStatus_t executeDataMovement(Instruction_t instruction) {
 
 	switch (instruction.opCode) {
 		case OP_STR: {
-			if (instruction.direction == DIR_IMMEDIATE) {
+			if (instruction.direction == ADDR_MODE_IMMEDIATE) {
 				raiseInterrupt(IC_INVALID_INSTR);
 				return INSTR_EXEC_FAIL;
 			}
