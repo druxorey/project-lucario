@@ -114,5 +114,5 @@ UTEST(Loader, LoadProgramMemoryError) {
 	ASSERT_EQ(programInfo._start, 1);
 	ASSERT_EQ(programInfo.wordCount, 2001);
 	ASSERT_STREQ(programInfo.programName, "LargeProg");
-	ASSERT_EQ(programInfo.status, (unsigned)LOAD_MEMORY_ERROR);
+	ASSERT_EQ(programInfo.status, (unsigned)LOAD_FILE_ERROR);
 }

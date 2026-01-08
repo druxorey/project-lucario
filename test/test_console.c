@@ -52,49 +52,37 @@ CommandStatus_t consoleProcessCommand(char* input) {
 	if (parseStatus == CMD_EMPTY) return CMD_EMPTY;
 
 	if (strcmp(command, "EXIT") == 0) return CMD_SUCCESS;
-	if (strcmp(command, "LOAD") == 0) return handleLoadCommand(argument);
-	if (strcmp(command, "RUN") == 0) return handleRunCommand();
-	if (strcmp(command, "DEBUG") == 0) return handleDebugCommand();
+	if (strcmp(command, "RUN") == 0) return handleRunCommand(argument);
+	if (strcmp(command, "DEBUG") == 0) return handleDebugCommand(argument);
 
 	return CMD_UNKNOWN;
 }
 
 UTEST_MAIN();
 
-// Verify that the consoleProcessCommand function returns correct status codes for LOAD command
-UTEST(Console, LoadCommandReturnsCorrectCodes) {
+// Verify that the consoleProcessCommand function returns correct status codes for RUN command
+UTEST(Console, RunCommandReturnsCorrectCode) {
 	loggerInit();
     memset(spyLastFileName, 0, CONSOLE_BUFFER_SIZE);
 
     char input[CONSOLE_BUFFER_SIZE];
     CommandStatus_t output;
 
-    strcpy(input, "LOAD program.txt\n");
+    strcpy(input, "RUN program.txt\n");
     output = consoleProcessCommand(input);
     ASSERT_EQ(output, (unsigned)CMD_SUCCESS);
 
-    strcpy(input, "LOAD  program.txt\n");
+    strcpy(input, "RUN  program.txt\n");
     output = consoleProcessCommand(input);
     ASSERT_EQ(output, (unsigned)CMD_SUCCESS);
 
-    strcpy(input, "LOAD incorrect.txt\n");
+    strcpy(input, "RUN incorrect.txt\n");
     output = consoleProcessCommand(input);
     ASSERT_EQ(output, (unsigned)CMD_LOAD_ERROR);
 
-    strcpy(input, "LOAD    \n");
+    strcpy(input, "RUN    \n");
     output = consoleProcessCommand(input);
     ASSERT_EQ(output, (unsigned)CMD_MISSING_ARGS);
-	loggerClose();
-}
-
-// Verify that the consoleProcessCommand function returns correct status codes for RUN command
-UTEST(Console, RunCommandReturnsCorrectCode) {
-	loggerInit();
-    char input[CONSOLE_BUFFER_SIZE];
-
-    strcpy(input, "RUN\n");
-    CommandStatus_t output = consoleProcessCommand(input);
-    ASSERT_EQ(output, (unsigned)CMD_SUCCESS);
 	loggerClose();
 }
 
@@ -131,33 +119,14 @@ UTEST(Console, UnknownCommandReturnsCorrectCode) {
 	loggerClose();
 }
 
-// Verify that the consoleProcessCommand parses LOAD command and calls loaderLoadProgram with correct filename
-UTEST(Console, CommandLoad) {
-	loggerInit();
-    memset(spyLastFileName, 0, CONSOLE_BUFFER_SIZE);
-    char input[] = "LOAD program.txt\n";
-    consoleProcessCommand(input);
-    ASSERT_STREQ("program.txt", spyLastFileName);
-	loggerClose();
-}
-
 // Verify that the consoleProcessCommand calls cpuRun when RUN command is processed
 UTEST(Console, CommandRunTriggersCpuRun) {
 	loggerInit();
     spyCpuRunCallCount = 0;
-    char input[] = "RUN\n";
+    memset(spyLastFileName, 0, CONSOLE_BUFFER_SIZE);
+    char input[] = "RUN program.txt\n";
     consoleProcessCommand(input);
+    ASSERT_STREQ("program.txt", spyLastFileName);
     ASSERT_EQ(1, spyCpuRunCallCount);
-	loggerClose();
-}
-
-// Verify that the consoleProcessCommand calls cpuStep when DEBUG command is processed
-UTEST(Console, CommandDebugTriggersCpuStep) {
-	loggerInit();
-    spyCpuStepCallCount = 0;
-    char input[] = "DEBUG\n";
-
-    consoleProcessCommand(input);
-    ASSERT_EQ(1, spyCpuStepCallCount);
 	loggerClose();
 }
