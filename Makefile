@@ -12,15 +12,16 @@ CFLAGS = -Wall -Wextra -pthread -g -I$(INC_DIR)
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
 
-DEPS_console = $(OBJ_DIR)/console.o $(OBJ_DIR)/logger.o
-DEPS_cpu = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
-DEPS_operations = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
+DEPS_console     = $(OBJ_DIR)/console.o $(OBJ_DIR)/logger.o
+DEPS_cpu         = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
+DEPS_operations  = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
 DEPS_definitions =
-DEPS_disk = $(OBJ_DIR)/disk.o $(OBJ_DIR)/logger.o
-DEPS_loader = $(OBJ_DIR)/loader.o $(OBJ_DIR)/logger.o
-DEPS_logger = $(OBJ_DIR)/logger.o
-DEPS_memory = $(OBJ_DIR)/memory.o $(OBJ_DIR)/logger.o
-DEPS_dma = $(OBJ_DIR)/dma.o $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
+DEPS_disk        = $(OBJ_DIR)/disk.o $(OBJ_DIR)/logger.o
+DEPS_loader      = $(OBJ_DIR)/loader.o $(OBJ_DIR)/logger.o
+DEPS_logger      = $(OBJ_DIR)/logger.o
+DEPS_memory      = $(OBJ_DIR)/memory.o $(OBJ_DIR)/logger.o
+DEPS_dma         = $(OBJ_DIR)/dma.o $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
+ALL_MODULES = console cpu operations definitions disk loader logger memory dma
 
 all: $(TARGET)
 	@echo -e "\e[1;32m[SUCCESS]\e[0m Compiled in normal mode"
@@ -45,6 +46,13 @@ ifndef mod
 	@echo -e "\e[1;31m[ERROR]\e[0m You must specify a module. Usage: make test mod=name"
 	@echo -e "Available modules: definitions, memory, console, loader"
 else
+ifeq ($(mod), all)
+	@echo -e "\e[1;33m[INFO]\e[0m Running ALL tests..."
+	@for module in $(ALL_MODULES); do \
+		echo -e "\e[1;35m[MULTI-TEST]\e[0m Launching test for: $$module"; \
+		$(MAKE) --no-print-directory test mod=$$module; \
+	done
+else
 	@mkdir -p $(BIN_DIR)
 	@if [ -z "$(DEPS_$(mod))" ]; then \
 		echo -e "\e[1;33m[WARNING]\e[0m No specific deps found for '$(mod)', linking only test file..."; \
@@ -53,6 +61,7 @@ else
 	$(CC) $(CFLAGS) $(TEST_DIR)/test_$(mod).c $(DEPS_$(mod)) -o $(BIN_DIR)/test_$(mod)
 	@echo -e "\e[1;34m[TEST]\e[0m Running tests..."
 	./$(BIN_DIR)/test_$(mod)
+endif
 endif
 
 clean:
