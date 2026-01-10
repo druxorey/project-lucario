@@ -6,7 +6,6 @@
 #include "../inc/cpu.h"
 #include "../inc/memory.h"
 
-DMA_t DMA;
 CPU_t CPU;
 word RAM[RAM_SIZE];
 Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];

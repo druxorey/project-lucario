@@ -305,7 +305,7 @@ UTEST(CPU_Addressing, FetchOutOfBoundsValue) {
 
 	instr.opCode = OP_LOAD;
 	instr.direction = ADDR_MODE_DIRECT;
-	instr.value = 99999;
+	instr.value = (uint16_t)99999;
 
 	InstructionStatus_t ret = fetchOperand(instr, &result);
 	
@@ -411,7 +411,7 @@ UTEST(CPU_DataMov, LoadInstruction) {
 	setupCleanCPU();
 
 	instr.direction = ADDR_MODE_DIRECT;
-	instr.value = 99999;
+	instr.value = (uint16_t)99999;
 
 	status = executeDataMovement(instr);
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);

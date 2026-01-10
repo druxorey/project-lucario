@@ -17,10 +17,12 @@ static void updatePSWFlags(void) {
 	else CPU.PSW.conditionCode = CC_POS;
 }
 
+
 static CPUStatus_t checkStatus(InstructionStatus_t status) {
 	if (status == INSTR_EXEC_FAIL) return CPU_STOP;
 	return CPU_OK;
 }
+
 
 static void internalPush(word value) {
 	CPU.SP -= 1;
@@ -33,6 +35,7 @@ static void internalPush(word value) {
 		#endif
 	}
 }
+
 
 static word internalPop(void) {
 	word value = 0;
@@ -75,6 +78,7 @@ static void restoreContext(InterruptCode_t codeHandled) {
 	CPU.RX                 = internalPop();
 }
 
+
 void raiseInterrupt(InterruptCode_t code) {
 	loggerLogInterrupt(code);
 	interruptBitmap |= (1 << code);
@@ -106,7 +110,7 @@ bool checkInterrupts(void) {
 	else                                                   codeToHandle = IC_INVALID_INT_CODE;
 
 	CPU.PSW.interruptEnable = ITR_DISABLED;
-	if (codeToHandle != -1) {
+	if (codeToHandle != (InterruptCode_t)-1) {
 		saveContext();
 		status = handleInterrupt(codeToHandle);
 		interruptBitmap &= ~(1 << codeToHandle);
@@ -158,6 +162,9 @@ bool handleInterrupt(InterruptCode_t code) {
 			#endif
 			return true;
 		case IC_SYSCALL:
+			#ifdef DEBUG
+			printf("\x1b[36m[DEBUG]: Handling System Call.\x1b[0m\n");
+			#endif
 			int syscallCode = wordToInt(CPU.AC);
 			if (syscallCode == 0) {
 				printf("SYSTEM CALL [0]: Program requested termination (EXIT).\n");
@@ -489,26 +496,26 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 			break;
 		}
 		case OP_SDMAM: {
-            int physicalAddr;
+			int physicalAddr;
 
-            if (CPU.PSW.mode == MODE_KERNEL) {
-                physicalAddr = intData;
-            } else {
-                physicalAddr = CPU.RB + intData;
-                if (physicalAddr > CPU.RL) {
-                    raiseInterrupt(IC_INVALID_ADDR);
-                    return INSTR_EXEC_FAIL;
-                }
-            }
+			if (CPU.PSW.mode == MODE_KERNEL) {
+				physicalAddr = intData;
+			} else {
+				physicalAddr = CPU.RB + intData;
+				if (physicalAddr > CPU.RL) {
+					raiseInterrupt(IC_INVALID_ADDR);
+					return INSTR_EXEC_FAIL;
+				}
+			}
 
-            if(physicalAddr < 0 || physicalAddr >= RAM_SIZE) {
-                raiseInterrupt(IC_INVALID_INSTR);
-                return INSTR_EXEC_FAIL;
-            }
+			if(physicalAddr < 0 || physicalAddr >= RAM_SIZE) {
+				raiseInterrupt(IC_INVALID_INSTR);
+				return INSTR_EXEC_FAIL;
+			}
 
-            DMA.memAddr = physicalAddr;
-            break;
-        }
+			DMA.memAddr = physicalAddr;
+			break;
+		}
 		case OP_SDMAON: {
 			pthread_mutex_lock(&BUS_LOCK);
 			DMA.pending = true;
@@ -532,7 +539,7 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 	return INSTR_EXEC_SUCCESS;
 }
 
-  
+ 
 InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
 
 	if (instruction.opCode == OP_PSH) {

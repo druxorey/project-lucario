@@ -44,7 +44,7 @@ UTEST(Disk, ReadOutOfBoundsSector) {
     readSector(track, cylinder, sector, &buffer); // Invalid track
 
     EXPECT_EQ(buffer.data, 0); // Buffer should be cleared on error
-    EXPECT_EQ(readSector(track, cylinder, sector, &buffer), DISK_ERR_OUT_OF_BOUNDS); // Check error code
+    EXPECT_EQ(readSector(track, cylinder, sector, &buffer), (unsigned)DISK_ERR_OUT_OF_BOUNDS); // Check error code
 }
 
 // Verify that writing to an out-of-bounds sector is handled gracefully.
@@ -56,6 +56,6 @@ UTEST(Disk, WriteOutOfBoundsSector) {
 
     writeSector(track, cylinder, sector, testData); // Invalid track
 
-    EXPECT_EQ(writeSector(track, cylinder, sector, testData), DISK_ERR_OUT_OF_BOUNDS); // Check error code
+    EXPECT_EQ(writeSector(track, cylinder, sector, testData), (unsigned)DISK_ERR_OUT_OF_BOUNDS); // Check error code
 }
 
