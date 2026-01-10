@@ -103,9 +103,9 @@ bool checkInterrupts(void) {
 	else if (interruptBitmap & (1 << IC_INVALID_ADDR))     codeToHandle = IC_INVALID_ADDR;
 	else if (interruptBitmap & (1 << IC_OVERFLOW))         codeToHandle = IC_OVERFLOW;
 	else if (interruptBitmap & (1 << IC_UNDERFLOW))        codeToHandle = IC_UNDERFLOW;
+	else if (interruptBitmap & (1 << IC_SYSCALL))          codeToHandle = IC_SYSCALL;
 	else if (interruptBitmap & (1 << IC_TIMER))            codeToHandle = IC_TIMER;
 	else if (interruptBitmap & (1 << IC_IO_DONE))          codeToHandle = IC_IO_DONE;
-	else if (interruptBitmap & (1 << IC_SYSCALL))          codeToHandle = IC_SYSCALL;
 	else if (interruptBitmap & (1 << IC_INVALID_SYSCALL))  codeToHandle = IC_INVALID_SYSCALL;
 	else                                                   codeToHandle = IC_INVALID_INT_CODE;
 
