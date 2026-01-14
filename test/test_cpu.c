@@ -68,7 +68,7 @@ UTEST(CPU, DecodeStage) {
 	Instruction_t inst;
 	inst = decode();
 	ASSERT_EQ(inst.opCode, (unsigned)OP_LOAD);
-	ASSERT_EQ(inst.direction, (unsigned)DIR_IMMEDIATE);
+	ASSERT_EQ(inst.direction, (unsigned)ADDR_MODE_IMMEDIATE);
 	ASSERT_EQ(inst.value, 5);
 }
 
@@ -80,7 +80,7 @@ UTEST(CPU, ExecuteStage) {
 	Instruction_t inst;
 	inst = decode();
 	ASSERT_EQ(inst.opCode, (unsigned)OP_SUM);
-	ASSERT_EQ(inst.direction, (unsigned)DIR_IMMEDIATE);
+	ASSERT_EQ(inst.direction, (unsigned)ADDR_MODE_IMMEDIATE);
 	ASSERT_EQ(inst.value, 14);
 	CPUStatus_t status = execute(inst);
 	ASSERT_EQ(CPU.AC, 21);
@@ -94,7 +94,7 @@ UTEST(CPU, ExecuteStageDefault) {
 	Instruction_t inst;
 	inst = decode();
 	ASSERT_EQ(inst.opCode, (unsigned)34);
-	ASSERT_EQ(inst.direction, (unsigned)DIR_IMMEDIATE);
+	ASSERT_EQ(inst.direction, (unsigned)ADDR_MODE_IMMEDIATE);
 	ASSERT_EQ(inst.value, 5);
 	CPUStatus_t status = execute(inst);
 	ASSERT_EQ(status, (unsigned)CPU_STOP);

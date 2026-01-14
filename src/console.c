@@ -1,15 +1,18 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
 #include <ctype.h>
+#include <dirent.h>
 
+#include "../inc/definitions.h"
 #include "../inc/console.h"
 #include "../inc/loader.h"
 #include "../inc/logger.h"
 #include "../inc/cpu.h"
 
-char logBuffer[LOG_BUFFER_SIZE];
+static char logBuffer[LOG_BUFFER_SIZE];
 
 static char* trimWhitespace(char* string) {
 	char* source = string;
@@ -68,8 +71,46 @@ static void printCommandList(void) {
 	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m\n");
 	printf("  \x1b[1mRUN <file>\x1b[0m     : Execute program in Normal Mode\n");
 	printf("  \x1b[1mDEBUG <file>\x1b[0m   : Execute program in Debug Mode\n");
+	printf("  \x1b[1mLIST\x1b[0m           : List the files in the current directory\n");
 	printf("  \x1b[1mEXIT\x1b[0m           : Shutdown the system\n");
 	printf("  \x1b[1mCOMANDS\x1b[0m        : Show this list\n\n");
+}
+
+
+static void printFilesList(void) {
+	DIR *actualDirectory;
+	struct dirent *dir;
+	char **files = NULL;
+	int count = 0;
+
+	actualDirectory = opendir(".");
+
+	if (actualDirectory) {
+		while ((dir = readdir(actualDirectory)) != NULL) {
+			if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0) continue;
+			if (dir->d_type == DT_DIR) continue;
+
+			char **temp = realloc(files, (count + 1) * sizeof(char *));
+			if (temp == NULL) {
+				perror("Error: Could not allocate memory for file list");
+				closedir(actualDirectory);
+				return;
+			}
+			files = temp;
+			files[count] = malloc(strlen(dir->d_name) + 1);
+			strcpy(files[count], dir->d_name);
+			count++;
+		}
+		for (int i = 0; i < count; i++) {
+        	printf("  %s\n", files[i]);
+			free(files[i]);
+    	}
+		free(files);
+		closedir(actualDirectory);
+	} else {
+		printf("Error: Could not open directory\n");
+		return;
+	}
 }
 
 
@@ -99,7 +140,7 @@ CommandStatus_t parseInput(char* input, char* command, char* argument) {
 
 CommandStatus_t handleLoadCommand(char* argument) {
 	if (strlen(argument) == 0) {
-		printf("Error: Missing filename.\n");
+		printf("Error: Missing filename\n");
 		loggerLog(LOG_WARNING, "User attempted to load program without filename argument");
 		return CMD_MISSING_ARGS;
 	}
@@ -111,13 +152,13 @@ CommandStatus_t handleLoadCommand(char* argument) {
 	#endif
 
 	if (info.status == LOAD_SUCCESS) {
-		printf("File '%s' loaded successfully.\n", argument);
+		printf("File '%s' loaded successfully\n", argument);
 		snprintf(logBuffer, sizeof(logBuffer), "Program loaded: %s (Words: %d, Start: %d)", argument, info.wordCount, info._start);
 		loggerLog(LOG_INFO, logBuffer);
 		return CMD_SUCCESS;
 	}
 
-	printf("Error loading file.\n");
+	printf("Error loading file\n");
 	snprintf(logBuffer, sizeof(logBuffer), "Failed to load program file: %s", argument);
 	loggerLog(LOG_ERROR, logBuffer);
 	return CMD_LOAD_ERROR;
@@ -134,7 +175,7 @@ CommandStatus_t handleRunCommand(char* argument) {
 	loggerLog(LOG_INFO, "Starting execution in Normal Mode");
 
 	if (cpuRun() == 0) {
-		printf("Execution finished.\n");
+		printf("Execution finished successfully\n");
 		loggerLog(LOG_INFO, "Normal Mode execution finished successfully");
 		return CMD_SUCCESS;
 	}
@@ -226,14 +267,16 @@ ConsoleStatus_t consoleStart(void) {
 
 		if (strcmp(command, "EXIT") == 0) {
 			loggerLog(LOG_INFO, "System shutdown requested via CLI (EXIT command)");
-			return CONSOLE_SUCCESS;
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: EXIT command received. Shutting down console.\x1b[0m\n");
 			#endif
+			return CONSOLE_SUCCESS;
 		} else if (strcmp(command, "RUN") == 0) {
 			output = handleRunCommand(argument);
 		} else if (strcmp(command, "DEBUG") == 0) {
 			output = handleDebugCommand(argument);
+		} else if (strcmp(command, "LIST") == 0) {
+			printFilesList();
 		} else if (strcmp(command, "COMANDS") == 0) {
 			printCommandList();
 		} else {

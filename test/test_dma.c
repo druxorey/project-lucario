@@ -6,7 +6,6 @@
 #include "../inc/cpu.h"
 #include "../inc/memory.h"
 
-DMA_t DMA;
 CPU_t CPU;
 word RAM[RAM_SIZE];
 Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];
@@ -18,13 +17,13 @@ static bool mockMemoryFailProtection = false;
 MemoryStatus_t writeMemory(address addr, word data) {
 	pthread_mutex_lock(&BUS_LOCK);
 	if (mockMemoryFailProtection) {
-	    pthread_mutex_unlock(&BUS_LOCK);
+		pthread_mutex_unlock(&BUS_LOCK);
 		return MEM_ERR_PROTECTION;
 	}
 
 	if (addr >= 0 && addr < RAM_SIZE) {
 		RAM[addr] = data;
-	    pthread_mutex_unlock(&BUS_LOCK);
+		pthread_mutex_unlock(&BUS_LOCK);
 		return MEM_SUCCESS;
 	}
 
@@ -38,7 +37,7 @@ MemoryStatus_t readMemory(address addr, word* outData) {
 
 	if (addr >= 0 && addr < RAM_SIZE) {
 		*outData = RAM[addr];
-	    pthread_mutex_unlock(&BUS_LOCK);
+		pthread_mutex_unlock(&BUS_LOCK);
 		return MEM_SUCCESS;
 	}
 
@@ -48,6 +47,7 @@ MemoryStatus_t readMemory(address addr, word* outData) {
 	return MEM_ERR_OUT_OF_BOUNDS;
 }
 
+//Mock function for DMA writing in memory
 MemoryStatus_t dmaWriteMemory(address addr, word data) {
 	pthread_mutex_lock(&BUS_LOCK);
 	if (addr >= 0 && addr < RAM_SIZE) {
@@ -59,6 +59,7 @@ MemoryStatus_t dmaWriteMemory(address addr, word data) {
 	return MEM_ERR_OUT_OF_BOUNDS;
 }
 
+// Mock for DMA Read Memory
 MemoryStatus_t dmaReadMemory(address addr, word* outData) {
 	pthread_mutex_lock(&BUS_LOCK);
 	if (addr >= 0 && addr < RAM_SIZE) {
@@ -127,8 +128,7 @@ UTEST(DMA, ExecuteSDMAOperations) {
 		
 	// Test for set memory position (SDMAM)
 	cpuReset();
-	// IMPORTANTE: Seteamos RL para que la validación de seguridad en cpu.c pase
-	CPU.RL = RAM_SIZE; 
+	CPU.RL = RAM_SIZE;
 	CPU.IR = 32100456; // SDMAM Inmediate with value 456
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
@@ -142,7 +142,7 @@ UTEST(DMA, ExecuteSDMAOperations) {
 	ret = executeDMAInstruction(instruction);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
-    usleep(50000); // Allow some time for DMA operation to complete
+	usleep(50000); // Allow some time for DMA operation to complete
 
 	ASSERT_FALSE(DMA.pending);
 	ASSERT_FALSE(DMA.active);
@@ -182,21 +182,21 @@ UTEST(DMA, ExecuteInvalidSDMAOperations) {
 		
 	// Test for set operation type (SDMAIO)
 	cpuReset();
-	CPU.IR = 31100003; 
+	CPU.IR = 31100003;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 	ASSERT_EQ(DMA.ioDirection, 0);
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
 
 	cpuReset();
-	CPU.IR = 31100001; 
+	CPU.IR = 31100001;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 	ASSERT_EQ(DMA.ioDirection, 1);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
 	cpuReset();
-	CPU.IR = 31100003; 
+	CPU.IR = 31100003;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 	ASSERT_EQ(DMA.ioDirection, 1);
@@ -204,8 +204,6 @@ UTEST(DMA, ExecuteInvalidSDMAOperations) {
 		
 	// Test for set memory position (SDMAM)
 	cpuReset();
-	// Aquí NO seteamos RL (es 0), por lo que cualquier dirección > 0 fallará.
-	// Esto verifica que OP_SDMAM ahora sí chequea protección.
 	CPU.IR = 32102000; // SDMAM Inmediate with value 2000 (Invalid memory address)
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
@@ -220,7 +218,7 @@ UTEST(DMA, ExecuteInvalidSDMAOperations) {
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, ret);
 }
 
-//Test execution of non-DMA instructions with DMA execution function
+// Test execution of non-DMA instructions with DMA execution function
 UTEST(DMA, ExecuteNonDMAInstruction) {
 	InstructionStatus_t ret;
 	Instruction_t instruction;
@@ -252,17 +250,17 @@ UTEST(DMA, ExecuteSDMAONWhenActive) {
 
 	// Set up DMA parameters
 	cpuReset();
-	CPU.IR = 28100001; 
+	CPU.IR = 28100001;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 
 	cpuReset();
-	CPU.IR = 29100002; 
+	CPU.IR = 29100002;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 
 	cpuReset();
-	CPU.IR = 30100003; 
+	CPU.IR = 30100003;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 
@@ -272,36 +270,36 @@ UTEST(DMA, ExecuteSDMAONWhenActive) {
 	ret = executeDMAInstruction(instruction);
 
 cpuReset();
-	CPU.RL = RAM_SIZE; // Seteamos RL para permitir la configuración (VITAL para el cambio físico)
-	CPU.IR = 32100456; 
+	CPU.RL = RAM_SIZE;
+	CPU.IR = 32100456;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 
 	// Start DMA operation
 	cpuReset();
-	CPU.IR = 33100000; 
+	CPU.IR = 33100000;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
 	// Attempt to set I/O direction again while DMA is active
 	cpuReset();
-	CPU.IR = 31100000; 
+	CPU.IR = 31100000;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 
 	cpuReset();
-	CPU.RL = RAM_SIZE; // Seteamos RL nuevamente para la segunda operación
-	CPU.IR = 32100789; 
+	CPU.RL = RAM_SIZE;
+	CPU.IR = 32100789;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
 
 	// Attempt to start DMA operation again while it's active
 	cpuReset();
-	CPU.IR = 33100000; 
+	CPU.IR = 33100000;
 	instruction = decode();
 	ret = executeDMAInstruction(instruction);
-	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret); 
+	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 
 	usleep(50000); // Allow some time for DMA operation to complete
 
@@ -314,68 +312,68 @@ cpuReset();
 
 // Tests CPU stops at mutex when DMA is actively transferring data
 UTEST(DMA, CPUWaitsWhenDMAActive) {
-    Instruction_t instruction;
+	Instruction_t instruction;
 
-    dmaReset();
+	dmaReset();
 
-    DISK[1][2][3].data = 7654321; // Preload disk sector with data
-    
-    pthread_t dmaThread;
-    pthread_create(&dmaThread, NULL, &dmaInit, NULL);
+	DISK[1][2][3].data = 7654321; // Preload disk sector with data
+	
+	pthread_t dmaThread;
+	pthread_create(&dmaThread, NULL, &dmaInit, NULL);
 
-    usleep(100000); // Allow DMA thread to initialize
+	usleep(100000); // Allow DMA thread to initialize
 
-    // Set up DMA parameters
-    cpuReset();
-    CPU.IR = 28100001; // SDMAP Inmediate with value 1
-    instruction = decode();
-    executeDMAInstruction(instruction);
+	// Set up DMA parameters
+	cpuReset();
+	CPU.IR = 28100001; // SDMAP Inmediate with value 1
+	instruction = decode();
+	executeDMAInstruction(instruction);
 
-    cpuReset();
-    CPU.IR = 29100002; // SDMAC Inmediate with value 2
-    instruction = decode();
-    executeDMAInstruction(instruction);
-        
-    cpuReset();
-    CPU.IR = 30100003; // SDMAS Inmediate with value 3
-    instruction = decode();
-    executeDMAInstruction(instruction);
-        
-    cpuReset();
-    CPU.IR = 31100000; // SDMAIO Inmediate with value 0 (Read)
-    instruction = decode();
-    executeDMAInstruction(instruction);
-        
-    cpuReset();
-    CPU.RL = RAM_SIZE; 
-    CPU.IR = 32100456; // SDMAM Inmediate with value 456
-    instruction = decode();
-    executeDMAInstruction(instruction);
+	cpuReset();
+	CPU.IR = 29100002; // SDMAC Inmediate with value 2
+	instruction = decode();
+	executeDMAInstruction(instruction);
+		
+	cpuReset();
+	CPU.IR = 30100003; // SDMAS Inmediate with value 3
+	instruction = decode();
+	executeDMAInstruction(instruction);
+		
+	cpuReset();
+	CPU.IR = 31100000; // SDMAIO Inmediate with value 0 (Read)
+	instruction = decode();
+	executeDMAInstruction(instruction);
+		
+	cpuReset();
+	CPU.RL = RAM_SIZE;
+	CPU.IR = 32100456; // SDMAM Inmediate with value 456
+	instruction = decode();
+	executeDMAInstruction(instruction);
 
-    // Start DMA operation
-    pthread_mutex_lock(&BUS_LOCK);
-    DMA.pending = true;
-    pthread_cond_signal(&DMA_COND);
-    pthread_mutex_unlock(&BUS_LOCK);
-    
-    // Prepare memory related instruction that should wait for DMA to complete
-    // Usamos acceso directo al array para simular carga previa
-    RAM[300] = 4000456; // Preload memory with LOAD instruction
-    CPU.PSW.pc = 300;
+	// Start DMA operation
+	pthread_mutex_lock(&BUS_LOCK);
+	DMA.pending = true;
+	pthread_cond_signal(&DMA_COND);
+	pthread_mutex_unlock(&BUS_LOCK);
+	
+	// Prepare memory related instruction that should wait for DMA to complete
+	// Usamos acceso directo al array para simular carga previa
+	RAM[300] = 4000456; // Preload memory with LOAD instruction
+	CPU.PSW.pc = 300;
 
-    // Wait until DMA is active
-    while (!DMA.active) {
-        usleep(1000);
-    }
-    
-    // Execute instruction while DMA is active
-    ASSERT_TRUE(DMA.pending);
-    ASSERT_TRUE(DMA.active);
-    cpuStep(); // This should wait until DMA is done
+	// Wait until DMA is active
+	while (!DMA.active) {
+		usleep(1000);
+	}
+	
+	// Execute instruction while DMA is active
+	ASSERT_TRUE(DMA.pending);
+	ASSERT_TRUE(DMA.active);
+	cpuStep(); // This should wait until DMA is done
 
-    ASSERT_FALSE(DMA.pending);
-    ASSERT_FALSE(DMA.active);
-    ASSERT_EQ(DMA.status, 0);
-    ASSERT_EQ((word)7654321, RAM[456]);
-    ASSERT_EQ((word)7654321, CPU.AC);
+	ASSERT_FALSE(DMA.pending);
+	ASSERT_FALSE(DMA.active);
+	ASSERT_EQ(DMA.status, 0);
+	ASSERT_EQ((word)7654321, RAM[456]);
+	ASSERT_EQ((word)7654321, CPU.AC);
 }

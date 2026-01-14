@@ -112,7 +112,7 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	setupCleanCPU();
 	CPU.AC = 5;
 	instruction.opCode = OP_SUM;
-	instruction.direction = DIR_IMMEDIATE;
+	instruction.direction = ADDR_MODE_IMMEDIATE;
 	instruction.value = 10;
 
 	ret = executeArithmetic(instruction);
@@ -125,7 +125,7 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	setupCleanCPU();
 	CPU.AC = 5;
 	instruction.opCode = OP_RES;
-	instruction.direction = DIR_IMMEDIATE;
+	instruction.direction = ADDR_MODE_IMMEDIATE;
 	instruction.value = 10;
 
 	ret = executeArithmetic(instruction);
@@ -140,7 +140,7 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	writeMemory(300, intToWord(-10, &CPU.PSW)); // RAM[300] = -10
 	
 	instruction.opCode = OP_RES;
-	instruction.direction = DIR_DIRECT;
+	instruction.direction = ADDR_MODE_DIRECT;
 	instruction.value = 300;
 
 	ret = executeArithmetic(instruction);
@@ -155,7 +155,7 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	writeMemory(300, intToWord(-3, &CPU.PSW)); // RAM[300] = -3
 	
 	instruction.opCode = OP_MULT;
-	instruction.direction = DIR_DIRECT;
+	instruction.direction = ADDR_MODE_DIRECT;
 	instruction.value = 300;
 
 	ret = executeArithmetic(instruction);
@@ -169,7 +169,7 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	CPU.AC = 20;
 	
 	instruction.opCode = OP_DIVI;
-	instruction.direction = DIR_IMMEDIATE;
+	instruction.direction = ADDR_MODE_IMMEDIATE;
 	instruction.value = 4;
 
 	ret = executeArithmetic(instruction);
@@ -183,7 +183,7 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	CPU.AC = 5;
 	
 	instruction.opCode = OP_DIVI;
-	instruction.direction = DIR_IMMEDIATE;
+	instruction.direction = ADDR_MODE_IMMEDIATE;
 	instruction.value = 2;
 
 	ret = executeArithmetic(instruction);
@@ -197,7 +197,7 @@ UTEST(CPU_ALU, ExecuteArithmeticOperation) {
 	CPU.AC = MAX_MAGNITUDE;
 	
 	instruction.opCode = OP_SUM;
-	instruction.direction = DIR_IMMEDIATE;
+	instruction.direction = ADDR_MODE_IMMEDIATE;
 	instruction.value = 1;
 
 	ret = executeArithmetic(instruction);
@@ -215,7 +215,7 @@ UTEST(CPU_ALU, ExecuteArithmeticDivByZero) {
 	CPU.AC = 10;
 	
 	instruction.opCode = OP_DIVI;
-	instruction.direction = DIR_IMMEDIATE;
+	instruction.direction = ADDR_MODE_IMMEDIATE;
 	instruction.value = 0;
 
 	InstructionStatus_t ret = executeArithmetic(instruction);
@@ -233,7 +233,7 @@ UTEST(CPU_ALU, ExecuteNonArithmeticOperation){
 	CPU.AC = 5;
 	
 	instruction.opCode = OP_COMP;
-	instruction.direction = DIR_IMMEDIATE;
+	instruction.direction = ADDR_MODE_IMMEDIATE;
 	instruction.value = 5;
 
 	InstructionStatus_t status = executeArithmetic(instruction);
@@ -242,14 +242,14 @@ UTEST(CPU_ALU, ExecuteNonArithmeticOperation){
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
 }
 
-// Test immediate addressing mode (DIR_IMMEDIATE = 0)
+// Test immediate addressing mode (ADDR_MODE_IMMEDIATE = 0)
 UTEST(CPU_Addressing, FetchImmediateValue) {
 	setupCleanCPU();
 	Instruction_t instr;
 	word result;
 
 	instr.opCode = OP_LOAD;
-	instr.direction = DIR_IMMEDIATE;
+	instr.direction = ADDR_MODE_IMMEDIATE;
 	instr.value = 9999;
 
 	InstructionStatus_t ret = fetchOperand(instr, &result);
@@ -258,7 +258,7 @@ UTEST(CPU_Addressing, FetchImmediateValue) {
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 }
 
-// Test direct addressing mode (DIR_DIRECT = 1)
+// Test direct addressing mode (ADDR_MODE_DIRECT = 1)
 UTEST(CPU_Addressing, FetchDirectValue) {
 	setupCleanCPU();
 	address addr = 500;
@@ -268,7 +268,7 @@ UTEST(CPU_Addressing, FetchDirectValue) {
 	writeMemory(addr, data);
 
 	instr.opCode = OP_LOAD;
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = addr;
 
 	InstructionStatus_t ret = fetchOperand(instr, &result);
@@ -277,7 +277,7 @@ UTEST(CPU_Addressing, FetchDirectValue) {
 	ASSERT_EQ((unsigned)INSTR_EXEC_SUCCESS, ret);
 }
 
-// Test indexed addressing mode (DIR_INDEXED = 2)
+// Test indexed addressing mode (ADDR_MODE_INDEXED = 2)
 UTEST(CPU_Addressing, FetchIndexedValue) {
 	setupCleanCPU();
 	address addr = 300;
@@ -288,7 +288,7 @@ UTEST(CPU_Addressing, FetchIndexedValue) {
 
 	CPU.AC = intToWord(addr, &CPU.PSW);
 	instr.opCode = OP_LOAD;
-	instr.direction = DIR_INDEXED;
+	instr.direction = ADDR_MODE_INDEXED;
 	instr.value = index;
 
 	InstructionStatus_t ret = fetchOperand(instr, &result);
@@ -304,8 +304,8 @@ UTEST(CPU_Addressing, FetchOutOfBoundsValue) {
 	word result;
 
 	instr.opCode = OP_LOAD;
-	instr.direction = DIR_DIRECT;
-	instr.value = 99999;
+	instr.direction = ADDR_MODE_DIRECT;
+	instr.value = (uint16_t)99999;
 
 	InstructionStatus_t ret = fetchOperand(instr, &result);
 	
@@ -326,7 +326,7 @@ UTEST(CPU_DataMov, StoreInstruction) {
 	// Direct Addressing (STR [Addr])
 	setupCleanCPU();
 	CPU.AC = data;
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	status = executeDataMovement(instr);
 	readMemory(addr, &result);
 
@@ -336,7 +336,7 @@ UTEST(CPU_DataMov, StoreInstruction) {
 	// Inmediate Addressing (STR Literal)
 	setupCleanCPU();
 	CPU.AC = data;
-	instr.direction = DIR_IMMEDIATE;
+	instr.direction = ADDR_MODE_IMMEDIATE;
 	status = executeDataMovement(instr);
 	readMemory(addr, &result);
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
@@ -344,7 +344,7 @@ UTEST(CPU_DataMov, StoreInstruction) {
 	// Indexed Addressing (STR [Base + AC])
 	setupCleanCPU();
 	CPU.AC = data;
-	instr.direction = DIR_INDEXED;
+	instr.direction = ADDR_MODE_INDEXED;
 	status = executeDataMovement(instr);
 	readMemory(addr, &result);
 
@@ -354,7 +354,7 @@ UTEST(CPU_DataMov, StoreInstruction) {
 	// Invalid Case: Out of Bounds Write
 	setupCleanCPU();
 	CPU.AC = data;
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = addr + RAM_SIZE;
 	status = executeDataMovement(instr);
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
@@ -372,7 +372,7 @@ UTEST(CPU_DataMov, LoadInstruction) {
 	// Inmediate Addressing (LOAD Literal)
 	setupCleanCPU();
 	word data = intToWord(13, &CPU.PSW);
-	instr.direction = DIR_IMMEDIATE;
+	instr.direction = ADDR_MODE_IMMEDIATE;
 	instr.value = data;
 	status = executeDataMovement(instr);
 
@@ -384,7 +384,7 @@ UTEST(CPU_DataMov, LoadInstruction) {
 	setupCleanCPU();
 	data = intToWord(-13, &CPU.PSW);
 	writeMemory(addr, data);
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = addr;
 
 	status = executeDataMovement(instr);
@@ -398,7 +398,7 @@ UTEST(CPU_DataMov, LoadInstruction) {
 	data = intToWord(13, &CPU.PSW);
 	CPU.AC = addr;
 	writeMemory(addr + offset, data);
-	instr.direction = DIR_INDEXED;
+	instr.direction = ADDR_MODE_INDEXED;
 	instr.value = offset;
 
 	status = executeDataMovement(instr);
@@ -410,8 +410,8 @@ UTEST(CPU_DataMov, LoadInstruction) {
 	// Invalid Case: Out of Bounds Read
 	setupCleanCPU();
 
-	instr.direction = DIR_DIRECT;
-	instr.value = 99999;
+	instr.direction = ADDR_MODE_DIRECT;
+	instr.value = (uint16_t)99999;
 
 	status = executeDataMovement(instr);
 	ASSERT_EQ((unsigned)INSTR_EXEC_FAIL, status);
@@ -451,7 +451,7 @@ UTEST(CPU_Branching, UnconditionalJump) {
 	// Successful unconditional jump (J Addr) [Direct Mode]
 	setupCleanCPU();
 	CPU.PSW.pc = initialPc;
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = jumpAddr;
 
 	status = executeBranching(instr);
@@ -462,7 +462,7 @@ UTEST(CPU_Branching, UnconditionalJump) {
 	// Successful unconditional jump (J Addr) [Immediate Mode]
 	setupCleanCPU();
 	CPU.PSW.pc = initialPc;
-	instr.direction = DIR_IMMEDIATE;
+	instr.direction = ADDR_MODE_IMMEDIATE;
 	instr.value = jumpAddr;
 
 	status = executeBranching(instr);
@@ -474,7 +474,7 @@ UTEST(CPU_Branching, UnconditionalJump) {
 	setupCleanCPU();
 	CPU.PSW.pc = initialPc;
 	CPU.AC = intToWord(jumpAddr, &CPU.PSW);
-	instr.direction = DIR_INDEXED;
+	instr.direction = ADDR_MODE_INDEXED;
 	instr.value = offset;
 
 	status = executeBranching(instr);
@@ -498,7 +498,7 @@ UTEST(CPU_Branching, JumpEqualSuccess) {
 	CPU.SP = stackAddr;
 	CPU.AC = value;
 
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -513,7 +513,7 @@ UTEST(CPU_Branching, JumpEqualSuccess) {
 	CPU.SP = stackAddr;
 	CPU.AC = value;
 
-	instr.direction = DIR_IMMEDIATE;
+	instr.direction = ADDR_MODE_IMMEDIATE;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -528,7 +528,7 @@ UTEST(CPU_Branching, JumpEqualSuccess) {
 	CPU.SP = stackAddr;
 	CPU.AC = addr;
 
-	instr.direction = DIR_INDEXED;
+	instr.direction = ADDR_MODE_INDEXED;
 	instr.value = offset;
 
 	status = executeBranching(instr);
@@ -543,7 +543,7 @@ UTEST(CPU_Branching, JumpEqualSuccess) {
 	CPU.SP = stackAddr;
 	CPU.AC = value + 1; // Different value than M[SP]
 
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -558,7 +558,7 @@ UTEST(CPU_Branching, JumpEqualSuccess) {
 	CPU.SP = stackAddr;
 	CPU.AC = value + 1; // Different value than M[SP]
 
-	instr.direction = DIR_IMMEDIATE;
+	instr.direction = ADDR_MODE_IMMEDIATE;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -573,7 +573,7 @@ UTEST(CPU_Branching, JumpEqualSuccess) {
 	CPU.SP = stackAddr;
 	CPU.AC = addr + 1; // Different value than M[SP]
 
-	instr.direction = DIR_INDEXED;
+	instr.direction = ADDR_MODE_INDEXED;
 	instr.value = offset;
 
 	status = executeBranching(instr);
@@ -597,7 +597,7 @@ UTEST(CPU_Branching, JumpNotEqual) {
 	CPU.SP = stackAddr;
 	CPU.AC = value + 1;
 
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -612,7 +612,7 @@ UTEST(CPU_Branching, JumpNotEqual) {
 	CPU.SP = stackAddr;
 	CPU.AC = value + 1;
 
-	instr.direction = DIR_IMMEDIATE;
+	instr.direction = ADDR_MODE_IMMEDIATE;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -627,7 +627,7 @@ UTEST(CPU_Branching, JumpNotEqual) {
 	CPU.SP = stackAddr;
 	CPU.AC = addr;
 
-	instr.direction = DIR_INDEXED;
+	instr.direction = ADDR_MODE_INDEXED;
 	instr.value = offset;
 
 	status = executeBranching(instr);
@@ -651,7 +651,7 @@ UTEST(CPU_Branching, JumpLessThan) {
 	CPU.SP = stackAddr;
 	CPU.AC = value - 1;
 
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -666,7 +666,7 @@ UTEST(CPU_Branching, JumpLessThan) {
 	CPU.SP = stackAddr;
 	CPU.AC = value - 1;
 
-	instr.direction = DIR_IMMEDIATE;
+	instr.direction = ADDR_MODE_IMMEDIATE;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -681,7 +681,7 @@ UTEST(CPU_Branching, JumpLessThan) {
 	CPU.AC = addr;
 	CPU.PSW.pc = initialPC;
 
-	instr.direction = DIR_INDEXED;
+	instr.direction = ADDR_MODE_INDEXED;
 	instr.value = offset;
 
 	status = executeBranching(instr);
@@ -705,7 +705,7 @@ UTEST(CPU_Branching, JumpGreaterThan) {
 	CPU.AC = value + 1;
 	CPU.PSW.pc = initialPC;
 
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -720,7 +720,7 @@ UTEST(CPU_Branching, JumpGreaterThan) {
 	CPU.AC = value + 1;
 	CPU.PSW.pc = initialPC;
 
-	instr.direction = DIR_IMMEDIATE;
+	instr.direction = ADDR_MODE_IMMEDIATE;
 	instr.value = addr;
 
 	status = executeBranching(instr);
@@ -735,7 +735,7 @@ UTEST(CPU_Branching, JumpGreaterThan) {
 	CPU.AC = addr;
 	CPU.PSW.pc = initialPC;
 
-	instr.direction = DIR_INDEXED;
+	instr.direction = ADDR_MODE_INDEXED;
 	instr.value = offset;
 
 	status = executeBranching(instr);
@@ -808,7 +808,7 @@ UTEST(CPU_Safety, HandleMemoryProtectionFault) {
 
 	Instruction_t instr;
 	instr.opCode = OP_STR;
-	instr.direction = DIR_DIRECT;
+	instr.direction = ADDR_MODE_DIRECT;
 	instr.value = 500;
 
 	mockMemoryFailProtection = true;
