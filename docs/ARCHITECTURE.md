@@ -31,7 +31,7 @@ The CPU contains specific registers defined in the `CPU_t` structure.
 | **MDR** | Memory Data Register | 8 digits | Buffer for the data bus during memory access. |
 | **RB** | Base Register | 5 digits | Defines the *start* of the current process memory partition. |
 | **RL** | Limit Register | 5 digits | Defines the *end* of the current process memory partition. |
-| **RX** | Index Register | 8 digits | Auxiliary register used for Indexed Addressing mode. |
+| **RX** | Boundary Register | 5 digits | Defines the heap upper limit and stack lower limit. |
 | **SP** | Stack Pointer | 5 digits | Points to the top of the system stack. |
 
 ### 1.3 Program Status Word (PSW)
