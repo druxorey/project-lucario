@@ -27,7 +27,7 @@
 #define LOG_BUFFER_SIZE    512      /** Log buffer size for debug output. */
 
 typedef int32_t word;               /** Represents an 8-decimal digit machine word. (SMMMMMMM S=Sign, M=Magnitude). */
-typedef int16_t address;            /** Represents a memory address (index 0-1999). */
+typedef int32_t address;            /** Represents a memory address (index 0-1999). */
 
 /**
  * @brief PSW Condition Codes.
@@ -152,7 +152,7 @@ typedef struct {
 typedef struct {
 	OpCode_t opCode;             /**< Operation Code (0-33) */
 	AddressingMode_t direction;  /**< Addressing Mode */
-	uint16_t value;              /**< Operand (Address or Immediate Value) */
+	uint32_t value;              /**< Operand (Address or Immediate Value) */
 } Instruction_t;
 
 /** @brief DMA Controller Definition (Direct Memory Access). */
