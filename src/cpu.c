@@ -549,7 +549,7 @@ InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
 		}
 		CPU.SP -= 1;
 	} else if (instruction.opCode == OP_POP) {
-		if (CPU.SP >= CPU.RL) {
+		if (CPU.SP + CPU.RB >= CPU.RL) {
 			raiseInterrupt(IC_INVALID_ADDR);
 			return INSTR_EXEC_FAIL;
 		}
@@ -650,7 +650,16 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeInterruptsChange(instruction);
 			return checkStatus(status);
 		case OP_TTI:
-			// Implementation
+			word interval;
+			if (fetchOperand(instruction, &interval) == INSTR_EXEC_SUCCESS) {
+				CPU.timerLimit = (uint64_t)wordToInt(interval);
+				#ifdef DEBUG
+				printf("[DEBUG]: Timer interval set to %lu cycles\n", CPU.timerLimit);
+				#endif
+				status = INSTR_EXEC_SUCCESS;
+			} else {
+				status = INSTR_EXEC_FAIL;
+			}
 			return checkStatus(status);
 		case OP_CHMOD:
 			if (instruction.value == 0) {

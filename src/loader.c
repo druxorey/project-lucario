@@ -102,8 +102,8 @@ ProgramInfo_t loadProgram(char* filePath) {
 		snprintf(logBuffer, sizeof(logBuffer), "Loader: PC set to start of program at address %d.", CPU.PSW.pc);
 		loggerLog(LOG_INFO, logBuffer);
 
-		CPU.timerLimit = 16;      
-		CPU.cyclesCounter = 0;    
+		CPU.timerLimit = 16;
+		CPU.cyclesCounter = 0;
 
 		CPU.PSW.mode = MODE_USER;
 		CPU.PSW.interruptEnable = ITR_ENABLED;
