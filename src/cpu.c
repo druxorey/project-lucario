@@ -9,7 +9,7 @@
 #include "../inc/memory.h"
 
 static uint16_t interruptBitmap = 0;
-static word *interruptWord = NULL;
+static int64_t interruptValue = 0;
 
 static void updatePSWFlags(void) {
 	if (CPU.AC == 0) CPU.PSW.conditionCode = CC_ZERO;
@@ -54,6 +54,9 @@ static word internalPop(void) {
 
 
 static void saveContext(void) {
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Saving context (SP=%d)\x1b[0m\n", CPU.SP);
+	#endif
 	internalPush(CPU.RX);
 	internalPush(CPU.RL);
 	internalPush(CPU.RB);
@@ -61,9 +64,15 @@ static void saveContext(void) {
 	internalPush((word)CPU.PSW.conditionCode);
 	internalPush(CPU.PSW.pc);
 	internalPush(CPU.AC);
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Context saved successfully (SP=%d)\x1b[0m\n", CPU.SP);
+	#endif
 }
 
 static void restoreContext(InterruptCode_t codeHandled) {
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Restoring context (SP=%d)\x1b[0m\n", CPU.SP);
+	#endif
 	word savedAC = internalPop();
 	
 	if (codeHandled != IC_OVERFLOW && codeHandled != IC_UNDERFLOW) {
@@ -76,6 +85,10 @@ static void restoreContext(InterruptCode_t codeHandled) {
 	CPU.RB                 = internalPop();
 	CPU.RL                 = internalPop();
 	CPU.RX                 = internalPop();
+	
+	#ifdef DEBUG
+	printf("\x1b[36m[DEBUG]: Context restored successfully (SP=%d)\x1b[0m\n", CPU.SP);
+	#endif
 }
 
 
@@ -85,10 +98,10 @@ void raiseInterrupt(InterruptCode_t code) {
 }
 
 
-void raiseInterruptRelated(InterruptCode_t code, word* relatedWord) {
+void raiseInterruptRelated(InterruptCode_t code, int64_t relatedValue) {
 	loggerLogInterrupt(code);
 	interruptBitmap |= (1 << code); 
-	interruptWord = relatedWord;
+	interruptValue = relatedValue;
 }
 
 
@@ -137,16 +150,13 @@ bool handleInterrupt(InterruptCode_t code) {
 			#endif
 			return false;
 		case IC_OVERFLOW:
-			int intValue = wordToInt(*interruptWord);
-			*interruptWord = intToWord(intValue % (MAX_MAGNITUDE + 1), &CPU.PSW);
-			interruptWord = NULL;
+			CPU.AC = intToWord((interruptValue % (MAX_MAGNITUDE + 1)), &CPU.PSW);
 			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Overflow detected. Adjusting value - Previous: %d, New: %d\x1b[0m\n", intValue, wordToInt(*interruptWord));
+			printf("\x1b[36m[DEBUG]: Overflow detected. Adjusting value - Previous: %ld, New: %d\x1b[0m\n", interruptValue, wordToInt(CPU.AC));
 			#endif
 			return true;
 		case IC_UNDERFLOW:
-			*interruptWord = 0;
-			interruptWord = NULL;
+			CPU.AC = intToWord(0, &CPU.PSW);
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: Underflow detected. Adjusting value to 0\x1b[0m\n");
 			#endif
@@ -196,10 +206,10 @@ int wordToInt(word wordValue) {
 }
 
 
-word intToWord(int intValue, PSW_t* psw) {
+word intToWord(int64_t intValue, PSW_t* psw) {
 	word wordValue = 0;
 	
-	int magnitude = (intValue >= 0) ? intValue : -intValue;
+	int64_t magnitude = (intValue >= 0) ? intValue : -intValue;
 	bool isNegative = (intValue < 0);
 
 	if (magnitude > MAX_MAGNITUDE) {
@@ -256,15 +266,19 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 	if (fetchOperand(instruction, &operandValue)) return INSTR_EXEC_FAIL;
 	int accumulatorValue = wordToInt(CPU.AC);
 	int operandIntValue = wordToInt(operandValue);
+	int64_t result = 0;
 	switch (op) {
 		case OP_SUM:
-			CPU.AC = intToWord(accumulatorValue + operandIntValue, &CPU.PSW);
+			result = (int64_t)accumulatorValue + operandIntValue;
+			CPU.AC = intToWord(result, &CPU.PSW);
 			break;
 		case OP_RES:
-			CPU.AC = intToWord(accumulatorValue - operandIntValue, &CPU.PSW);
+			result = (int64_t)accumulatorValue - operandIntValue;
+			CPU.AC = intToWord(result, &CPU.PSW);
 			break;
 		case OP_MULT:
-			CPU.AC = intToWord(accumulatorValue * operandIntValue, &CPU.PSW);
+			result = (int64_t)accumulatorValue * operandIntValue;
+			CPU.AC = intToWord(result, &CPU.PSW);
 			break;
 		case OP_DIVI:
 			if (operandIntValue == 0) {
@@ -272,14 +286,15 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 				CPU.PSW.conditionCode = CC_OVERFLOW;
 				return INSTR_EXEC_FAIL;
 			}
-			CPU.AC = intToWord(accumulatorValue / operandIntValue, &CPU.PSW);
+			result = (int64_t)accumulatorValue / operandIntValue;
+			CPU.AC = intToWord(result, &CPU.PSW);
 			break;
 		default:
 			raiseInterrupt(IC_INVALID_INSTR);
 			return INSTR_EXEC_FAIL;
 	}
 	if (CPU.PSW.conditionCode == CC_OVERFLOW) {
-		raiseInterruptRelated(IC_OVERFLOW, &CPU.AC);
+		raiseInterruptRelated(IC_OVERFLOW, result);
 	}
 	return INSTR_EXEC_SUCCESS;
 }
@@ -732,7 +747,6 @@ bool cpuStep(void) {
 	if ((CPU.cyclesCounter >= CPU.timerLimit) && (CPU.timerLimit > 0)) {
 		CPU.cyclesCounter = 0;
 		raiseInterrupt(IC_TIMER);
-		// Call the interrupt handler
 	}
 
 	return checkInterrupts();
@@ -752,5 +766,5 @@ int cpuRun(void) {
 void cpuReset(void) {
 	CPU = (CPU_t){0};
 	interruptBitmap = 0;
-	interruptWord = NULL;
+	interruptValue = 0;
 }

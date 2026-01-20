@@ -6,7 +6,7 @@
  * instruction cycle (Fetch-Decode-Execute), ALU operations, and internal
  * data format conversions (Sign-Magnitude <-> Two's Complement).
  *
- * @version 1.3
+ * @version 1.4
  */
 
 #ifndef CPU_H
@@ -55,9 +55,9 @@ void raiseInterrupt(InterruptCode_t code);
  * will be handled by the control unit at the end of the current instruction cycle.
  *
  * @param code The specific interrupt code to be raised.
- * @param relatedWord Pointer to the word associated with the interrupt.
+ * @param relatedValue The overflow value associated with the interrupt.
  */
-void raiseInterruptRelated(InterruptCode_t code, word* relatedWord);
+void raiseInterruptRelated(InterruptCode_t code, int64_t relatedValue);
 
 /**
  * @brief Checks and handles pending interrupts.
@@ -103,7 +103,7 @@ int wordToInt(word wordValue);
  * @param psw Pointer to the PSW structure to update status flags.
  * @return word The 8-digit Sign-Magnitude representation.
  */
-word intToWord(int intValue, PSW_t *psw);
+word intToWord(int64_t intValue, PSW_t *psw);
 
 /**
  * @brief Retrieves the effective value of an instruction operand.

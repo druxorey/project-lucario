@@ -69,7 +69,7 @@ UTEST(CPU, DecodeStage) {
 	inst = decode();
 	ASSERT_EQ(inst.opCode, (unsigned)OP_LOAD);
 	ASSERT_EQ(inst.direction, (unsigned)ADDR_MODE_IMMEDIATE);
-	ASSERT_EQ(inst.value, 5);
+	ASSERT_EQ(inst.value, (unsigned)5);
 }
 
 // Verify that the execute stage correctly handles an valid instruction
@@ -81,7 +81,7 @@ UTEST(CPU, ExecuteStage) {
 	inst = decode();
 	ASSERT_EQ(inst.opCode, (unsigned)OP_SUM);
 	ASSERT_EQ(inst.direction, (unsigned)ADDR_MODE_IMMEDIATE);
-	ASSERT_EQ(inst.value, 14);
+	ASSERT_EQ(inst.value, (unsigned)14);
 	CPUStatus_t status = execute(inst);
 	ASSERT_EQ(CPU.AC, 21);
 	ASSERT_EQ(status, (unsigned)CPU_OK);
@@ -95,7 +95,7 @@ UTEST(CPU, ExecuteStageDefault) {
 	inst = decode();
 	ASSERT_EQ(inst.opCode, (unsigned)34);
 	ASSERT_EQ(inst.direction, (unsigned)ADDR_MODE_IMMEDIATE);
-	ASSERT_EQ(inst.value, 5);
+	ASSERT_EQ(inst.value, (unsigned)5);
 	CPUStatus_t status = execute(inst);
 	ASSERT_EQ(status, (unsigned)CPU_STOP);
 }
@@ -202,7 +202,7 @@ UTEST(CPU, CheckPendingInterrupts) {
 	// Overflow Interrupt
 	cpuSetup();
 	CPU.AC = MAX_MAGNITUDE+1;
-	raiseInterruptRelated(IC_OVERFLOW, &CPU.AC);
+	raiseInterruptRelated(IC_OVERFLOW, (int64_t)CPU.AC);
 	result = checkInterrupts();
 	ASSERT_TRUE(result);
 
@@ -220,7 +220,7 @@ UTEST(CPU, CheckPendingInterrupts) {
 	// There's not current implementation that generates underflow, so we manually raise it
 	cpuSetup();
 	CPU.AC = -MAX_MAGNITUDE-1;
-	raiseInterruptRelated(IC_UNDERFLOW, &CPU.AC);
+	raiseInterruptRelated(IC_UNDERFLOW, (int64_t)CPU.AC);
 	result = checkInterrupts();
 	ASSERT_TRUE(result);
 
