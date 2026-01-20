@@ -206,10 +206,10 @@ int wordToInt(word wordValue) {
 }
 
 
-word intToWord(int64_t intValue, PSW_t* psw) {
+word intToWord(int intValue, PSW_t* psw) {
 	word wordValue = 0;
 	
-	int64_t magnitude = (intValue >= 0) ? intValue : -intValue;
+	int magnitude = (intValue >= 0) ? intValue : -intValue;
 	bool isNegative = (intValue < 0);
 
 	if (magnitude > MAX_MAGNITUDE) {
@@ -269,16 +269,17 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 	int64_t result = 0;
 	switch (op) {
 		case OP_SUM:
-			result = (int64_t)accumulatorValue + operandIntValue;
-			CPU.AC = intToWord(result, &CPU.PSW);
+			CPU.AC = intToWord(accumulatorValue + operandIntValue, &CPU.PSW);
 			break;
 		case OP_RES:
-			result = (int64_t)accumulatorValue - operandIntValue;
-			CPU.AC = intToWord(result, &CPU.PSW);
+			CPU.AC = intToWord(accumulatorValue - operandIntValue, &CPU.PSW);
 			break;
 		case OP_MULT:
 			result = (int64_t)accumulatorValue * operandIntValue;
-			CPU.AC = intToWord(result, &CPU.PSW);
+			if (result > MAX_MAGNITUDE || result < -MAX_MAGNITUDE) {
+				CPU.PSW.conditionCode = CC_OVERFLOW;
+			}
+			CPU.AC = intToWord(result % (MAX_MAGNITUDE + 1), &CPU.PSW);
 			break;
 		case OP_DIVI:
 			if (operandIntValue == 0) {
@@ -286,8 +287,7 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 				CPU.PSW.conditionCode = CC_OVERFLOW;
 				return INSTR_EXEC_FAIL;
 			}
-			result = (int64_t)accumulatorValue / operandIntValue;
-			CPU.AC = intToWord(result, &CPU.PSW);
+			CPU.AC = intToWord(accumulatorValue / operandIntValue, &CPU.PSW);
 			break;
 		default:
 			raiseInterrupt(IC_INVALID_INSTR);

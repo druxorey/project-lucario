@@ -103,7 +103,7 @@ int wordToInt(word wordValue);
  * @param psw Pointer to the PSW structure to update status flags.
  * @return word The 8-digit Sign-Magnitude representation.
  */
-word intToWord(int64_t intValue, PSW_t *psw);
+word intToWord(int intValue, PSW_t *psw);
 
 /**
  * @brief Retrieves the effective value of an instruction operand.
