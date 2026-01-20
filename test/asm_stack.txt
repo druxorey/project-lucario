@@ -1,0 +1,27 @@
+_start 1
+.NumeroPalabras 24
+.NombreProg TestAsmStack
+04100010   // 00. LOAD 10     AC=10
+25000000   // 01. PSH         Reserve stack space
+24000000   // 02. STRSP       Push AC=10 into M[SP]
+04100020   // 03. LOAD 20     AC=20
+25000000   // 04. PSH         Reserve stack space
+24000000   // 05. STRSP       Push AC=20 into M[SP]
+04100030   // 06. LOAD 30     AC=30
+25000000   // 07. PSH         Reserve stack space
+24000000   // 08. STRSP       Push AC=30 into M[SP]
+23000000   // 09. LOADSP      Load M[SP] -> AC=30
+26000000   // 10. POP         Pop top of stack
+23000000   // 11. LOADSP      Load M[SP] -> AC=20
+01100005   // 12. RES 5       AC=15
+24000000   // 13. STRSP       Overwrite top with AC=15
+23000000   // 14. LOADSP      Load M[SP] -> AC=15
+26000000   // 15. POP         Pop top of stack
+23000000   // 16. LOADSP      Load M[SP] -> AC=10
+00100007   // 17. SUM 7       AC=17
+24000000   // 18. STRSP       Overwrite top with AC=17
+26000000   // 19. POP         Pop top of stack
+26000000   // 20. POP         Pop top of stack
+04100000   // 21. LOAD 0      Exit code, AC=0
+13000000   // 22. SVC
+00000000   // 23.             Padding

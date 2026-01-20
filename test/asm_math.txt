@@ -1,0 +1,15 @@
+_start 1
+.NumeroPalabras 12
+.NombreProg TestAsmMath
+04100010   // 01. LOAD 10     Immediate
+05000011   // 02. STR 11      Direct -> Save 10 in var
+04100020   // 03. LOAD 20     Immediate
+00000011   // 04. SUM [11]    Direct -> AC = 20 + 10 = 30
+02100002   // 05. MULT 2      Immediate -> AC = 30 * 2 = 60
+03100005   // 06. DIVI 5      Immediate -> AC = 60 / 5 = 12
+01100003   // 07. RES 3       Immediate -> AC = 12 - 3 = 9
+05000012   // 08. STR 12      Direct -> Save final resul
+04100000   // 09. LOAD 0      Exit Code
+13000000   // 00. SVC         Terminate
+00000000   // 11. Var1        Reserved space
+00000000   // 12. Result      Reserved space

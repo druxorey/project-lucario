@@ -1,0 +1,38 @@
+_start 1
+.NumeroPalabras 35
+.NombreProg TestAsmMemory
+04100042   // 00. LOAD 42     AC=42
+05000001   // 01. STR [1]     Store AC=42 in M[1]
+04100099   // 02. LOAD 99     AC=99
+05000002   // 03. STR [2]     Store AC=99 in M[2]
+04000001   // 04. LOAD [1]    Load M[1] -> AC=42
+00100001   // 05. SUM 1       AC=43
+05000003   // 06. STR [3]     Store AC=43 in M[3]
+04000002   // 07. LOAD [2]    Load M[2] -> AC=99
+01100050   // 08. RES 50      AC=49
+05000004   // 09. STR [4]     Store AC=49 in M[4]
+04000003   // 10. LOAD [3]    Load M[3] -> AC=43
+02100002   // 11. MULT 2      AC=86
+05000005   // 12. STR [5]     Store AC=86 in M[5]
+04000004   // 13. LOAD [4]    Load M[4] -> AC=49
+03100007   // 14. DIVI 7      AC=7
+05000006   // 15. STR [6]     Store AC=7 in M[6]
+04000005   // 16. LOAD [5]    Load M[5] -> AC=86
+01100080   // 17. RES 80      AC=6
+05000007   // 18. STR [7]     Store AC=6 in M[7]
+04000006   // 19. LOAD [6]    Load M[6] -> AC=7
+00100003   // 20. SUM 3       AC=10
+05000008   // 21. STR [8]     Store AC=10 in M[8]
+04000007   // 22. LOAD [7]    Load M[7] -> AC=6
+00199999   // 23. SUM 99999   AC=100005
+05000009   // 24. STR [9]     Store AC=100005 in M[9]
+04000008   // 25. LOAD [8]    Load M[8] -> AC=10
+02100010   // 26. MULT 10     AC=100
+05000010   // 27. STR [10]    Store AC=100 in M[10]
+04000010   // 28. LOAD [10]   Load M[10] -> AC=100
+01100050   // 29. RES 50      AC=50
+05000011   // 30. STR [11]    Store AC=50 in M[11]
+04000011   // 31. LOAD [11]   Load M[11] -> AC=50
+04100000   // 32. LOAD 0      Exit code, AC=0
+13000000   // 33. SVC
+00000000   // 34.             Padding

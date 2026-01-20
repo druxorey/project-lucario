@@ -1,0 +1,26 @@
+_start 1
+.NumeroPalabras 23
+.NombreProg TestAsmArithmetic
+04100010   // 00. LOAD 10     AC=10
+00100005   // 01. SUM 5       AC=15
+02100003   // 02. MULT 3      AC=45
+01100020   // 03. RES 20      AC=25
+03100002   // 04. DIVI 2      AC=12
+05000001   // 05. STR [1]     Store AC=12 in M[1]
+04000001   // 06. LOAD [1]    Load M[1] -> AC=12
+00199999   // 07. SUM 99999   AC=100011
+05000002   // 08. STR [2]     Store AC=100011 in M[2]
+04000002   // 09. LOAD [2]    Load M[2] -> AC=100011
+01100005   // 10. RES 5       AC=100006
+02100010   // 11. MULT 10     AC=1000060
+03100003   // 12. DIVI 3      AC=333353
+04199999   // 13. LOAD 99999  AC=99999
+01199998   // 14. RES 99998   AC=1
+05000003   // 15. STR [3]     Store AC=1 in M[3]
+04000003   // 16. LOAD [3]    Load M[3] -> AC=1
+00100009   // 17. SUM 9       AC=10
+05000010   // 18. STR [10]    Store AC=10 in M[10]
+04000010   // 19. LOAD [10]   Load M[10] -> AC=10
+04100000   // 20. LOAD 0      Exit code, AC=0
+13000000   // 21. SVC
+00000000   // 22.             Padding

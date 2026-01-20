@@ -1,0 +1,25 @@
+_start 1
+.NumeroPalabras 21
+.NombreProg TestAsmIndex
+00100005   // 01. SUM 5       AC=15
+04100001   // 00. LOAD 1      AC=1
+05000001   // 01. STR [1]     Store AC=1 in M[1]
+04100002   // 02. LOAD 2      AC=2
+05000002   // 03. STR [2]     Store AC=2 in M[2]
+04100003   // 04. LOAD 3      AC=3
+05000003   // 05. STR [3]     Store AC=3 in M[3]
+04100004   // 06. LOAD 4      AC=4
+05000004   // 07. STR [4]     Store AC=4 in M[4]
+04100005   // 08. LOAD 5      AC=5
+05000005   // 09. STR [5]     Store AC=5 in M[5]
+04100002   // 10. LOAD 2      Index in AC=2
+04200001   // 11. LOAD [1]+AC AC=M[1+2]=M[3]=3
+25000000   // 12. PSH         Reserve stack space
+24000000   // 13. STRSP       Push AC=3 into M[SP]
+04100004   // 14. LOAD 4      AC=4
+08100003   // 15. COMP 3      AC-3=1 => CC_POS
+12100017   // 16. JMPLGT 17   If AC > M[SP] then jump to 17
+26000000   // 17. POP         Pop top of stack
+04100000   // 18. LOAD 0      Exit code, AC=0
+13000000   // 19. SVC
+00000000   // 20.             Padding

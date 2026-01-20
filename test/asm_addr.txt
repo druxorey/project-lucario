@@ -1,0 +1,24 @@
+_start 1
+.NumeroPalabras 25
+.NombreProg TestAsmAddr
+04100777   // 01. LOAD 777    Immediate
+05000020   // 02. STR 20      Direct. RAM[20] = 777
+04100010   // 03. LOAD 10     Immediate. AC = 10
+04200010   // 04. LOAD 10+AC  Indexed. Read RAM[10+10] = RAM[20]. AC must be 777
+05000021   // 05. STR 21      Direct. Store what we read (777)
+04100000   // 06. LOAD 0
+13000000   // 07. SVC
+00000000   // ...             Padding up to 20
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000   // 20.             The 777 will be here
+00000000   // 21.             The result will be stored here

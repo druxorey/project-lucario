@@ -1,0 +1,17 @@
+_start 1
+.NumeroPalabras 15
+.NombreProg TestAsmLoop
+04100002   // 00. LOAD 2      Reference value
+25000000   // 01. PSH         Decrement SP first to reserve space
+24000000   // 02. STRSP       Store 2 in the new valid M[SP]
+04100005   // 03. LOAD 5      Initial counter in AC
+08100010   // 04. COMP 10     5-10 = -5. Flags: CC_NEG
+12100007   // 05. JMPLGT 07   Is 5 > 2? Yes. Jump to line 07 (RES 1)
+27000012   // 06. J 12        Safety jump to end
+01100001   // 07. RES 1       Decrement counter
+10000007   // 08. JMPNE 07    Is AC != 2? If 4 or 3, loop back to 07 (RES 1)
+09000010   // 09. JMPE 10     Is AC == 2? If 2, jump to cleanup (10)
+26000000   // 11. POP         Increment SP, "delete" the 2
+04100000   // 12. LOAD 0      Exit code
+13000000   // 13. SVC
+00000000   // 14.             Padding

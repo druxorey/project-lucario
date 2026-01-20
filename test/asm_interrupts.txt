@@ -1,0 +1,14 @@
+_start 1
+.NumeroPalabras 11
+.NombreProg TestAsmInterrupts
+04100011   // 00. LOAD 11     AC=11
+13000000   // 01. SVC         Service; prints and continues
+16000000   // 02. DHAB        Disable interrupts
+18100001   // 03. CHMOD 1     Switch to KERNEL Mode
+04100022   // 04. LOAD 22     AC=22
+13000000   // 05. SVC         Service; deferred until interrupts enabled
+18100000   // 06. CHMOD 0     Switch to USER Mode
+15000000   // 07. HAB         Enable interrupts; handle pending ones
+13000000   // 08. SVC         Service; immediate with IRQ enabled
+04100000   // 09. LOAD 0      Exit code, AC=0
+13000000   // 10. SVC EXIT    stops execution
