@@ -103,6 +103,8 @@ When you run `DEBUG <filename>`, the system enters an interactive inspection ses
 
 For a deep dive into the simulated hardware specifications (Instruction Set, Memory Layout, and Interrupts), please refer to the [Virtual Architecture Reference](docs/ARCHITECTURE.md).
 
+You can find assembly program examples for this architecture in the `test/` directory, identified by the `asm_` prefix (e.g., `test/asm_myprogram`).
+
 ## Development Guide
 
 This document provides guidelines for the project development. For more details, refer to the [DEVELOPMENT.md](docs/DEVELOPMENT.md) file.
