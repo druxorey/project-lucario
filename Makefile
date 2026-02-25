@@ -4,13 +4,16 @@ OBJ_DIR = obj
 BIN_DIR = bin
 TEST_DIR = test
 
+SRC_DIRS = $(SRC_DIR) $(SRC_DIR)/hardware $(SRC_DIR)/kernel
+vpath %.c $(SRC_DIRS)
+
 TARGET = $(BIN_DIR)/project_lucario
 
 CC = gcc
 CFLAGS = -Wall -Wextra -pthread -g -I$(INC_DIR)
 
-SRCS = $(wildcard $(SRC_DIR)/*.c)
-OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
+SRCS = $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
+OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))
 
 DEPS_console     = $(OBJ_DIR)/console.o $(OBJ_DIR)/logger.o
 DEPS_cpu         = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
@@ -36,7 +39,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
 	@echo -e "\e[1;32m[SUCCESS]\e[0m Build successful!"
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+$(OBJ_DIR)/%.o: %.c
 	@mkdir -p $(OBJ_DIR)
 	@echo -e "\e[1;33m[INFO]\e[0m Compiling: $<"
 	$(CC) $(CFLAGS) -c $< -o $@

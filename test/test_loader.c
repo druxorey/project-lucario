@@ -1,7 +1,8 @@
 #include <stdbool.h>
+
 #include "../lib/utest.h"
-#include "../inc/loader.h"
-#include "../inc/memory.h"
+#include "../inc/hardware/memory.h"
+#include "../inc/kernel/loader.h"
 
 CPU_t CPU;
 word RAM[RAM_SIZE];

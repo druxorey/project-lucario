@@ -2,9 +2,9 @@
 #include <pthread.h>
 
 #include "../lib/utest.h"
-#include "../inc/dma.h"
-#include "../inc/cpu.h"
-#include "../inc/memory.h"
+#include "../inc/hardware/dma.h"
+#include "../inc/hardware/cpu.h"
+#include "../inc/hardware/memory.h"
 
 CPU_t CPU;
 word RAM[RAM_SIZE];

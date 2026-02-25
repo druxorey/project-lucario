@@ -1,7 +1,7 @@
 #include <stdbool.h>
 
 #include "../lib/utest.h"
-#include "../inc/disk.h"
+#include "../inc/hardware/disk.h"
 
 Sector_t testData = {0};
 Sector_t buffer = {0};

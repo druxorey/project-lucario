@@ -4,12 +4,13 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#include "../inc/logger.h"
-#include "../inc/cpu.h"
-#include "../inc/memory.h"
+#include "../../inc/logger.h"
+#include "../../inc/hardware/cpu.h"
+#include "../../inc/hardware/memory.h"
 
 static uint16_t interruptBitmap = 0;
 static int64_t interruptValue = 0;
+static char logBuffer[LOG_BUFFER_SIZE];
 
 static void updatePSWFlags(void) {
 	if (CPU.AC == 0) CPU.PSW.conditionCode = CC_ZERO;
@@ -57,6 +58,7 @@ static void saveContext(void) {
 	#ifdef DEBUG
 	printf("\x1b[36m[DEBUG]: Saving context (SP=%d)\x1b[0m\n", CPU.SP);
 	#endif
+
 	internalPush(CPU.RX);
 	internalPush(CPU.RL);
 	internalPush(CPU.RB);
@@ -64,6 +66,10 @@ static void saveContext(void) {
 	internalPush((word)CPU.PSW.conditionCode);
 	internalPush(CPU.PSW.pc);
 	internalPush(CPU.AC);
+
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Context saved: PC=%03d, SP=%d, AC=%d", CPU.PSW.pc, CPU.SP, wordToInt(CPU.AC));
+	loggerLogHardware(LOG_INFO, logBuffer);
+
 	#ifdef DEBUG
 	printf("\x1b[36m[DEBUG]: Context saved successfully (SP=%d)\x1b[0m\n", CPU.SP);
 	#endif
@@ -85,6 +91,9 @@ static void restoreContext(InterruptCode_t codeHandled) {
 	CPU.RB                 = internalPop();
 	CPU.RL                 = internalPop();
 	CPU.RX                 = internalPop();
+
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Context restored: Returning to PC=%03d, SP=%d", CPU.PSW.pc, CPU.SP);
+	loggerLogHardware(LOG_INFO, logBuffer);
 	
 	#ifdef DEBUG
 	printf("\x1b[36m[DEBUG]: Context restored successfully (SP=%d)\x1b[0m\n", CPU.SP);
@@ -138,49 +147,60 @@ bool checkInterrupts(void) {
 
 
 bool handleInterrupt(InterruptCode_t code) {
+	int syscallCode;
 	switch (code) {
 		case IC_INVALID_INSTR:
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: Invalid Instruction. Aborting execution.\x1b[0m\n");
 			#endif
+			loggerLogHardware(LOG_ERROR, "Invalid Instruction: CPU Halt triggered");
 			return false;
 		case IC_INVALID_ADDR:
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: Invalid Address. Aborting execution.\x1b[0m\n");
 			#endif
+			loggerLogHardware(LOG_ERROR, "Invalid Memory Address: CPU Halt triggered");
 			return false;
 		case IC_OVERFLOW:
 			CPU.AC = intToWord((interruptValue % (MAX_MAGNITUDE + 1)), &CPU.PSW);
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: Overflow detected. Adjusting value - Previous: %ld, New: %d\x1b[0m\n", interruptValue, wordToInt(CPU.AC));
 			#endif
+			snprintf(logBuffer, LOG_BUFFER_SIZE, "Arithmetic Overflow: Previous %ld -> Adjusted to %d", interruptValue, wordToInt(CPU.AC));
+			loggerLogHardware(LOG_INFO, logBuffer);
 			return true;
 		case IC_UNDERFLOW:
 			CPU.AC = intToWord(0, &CPU.PSW);
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: Underflow detected. Adjusting value to 0\x1b[0m\n");
 			#endif
+			loggerLogHardware(LOG_INFO, "Arithmetic Underflow: Value clamped to 0");
 			return true;
 		case IC_TIMER: // Simulate program pause
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: Timer interrupt triggered. Pausing program.\x1b[0m\n");
 			#endif
+			loggerLogHardware(LOG_INFO, "Timer Interrupt: External clock tick received");
 			return true;
 		case IC_IO_DONE: // Simulate program resume after I/O completion
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: I/O operation completed. Resuming program.\x1b[0m\n");
 			#endif
+			loggerLogHardware(LOG_INFO, "I/O Interrupt: Peripheral operation completed");
 			return true;
 		case IC_SYSCALL:
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: Handling System Call.\x1b[0m\n");
 			#endif
-			int syscallCode = wordToInt(CPU.AC);
+			syscallCode = wordToInt(CPU.AC);
 			if (syscallCode == 0) {
+				loggerLogHardware(LOG_INFO, "SYSCALL [0]: Program requested EXIT");
 				printf("SYSTEM CALL [0]: Program requested termination (EXIT).\n");
 				return false;
 			} else {
 				// Any other code is considered a service request that does NOT stop the CPU
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [%d]: Service requested by process", syscallCode);
+				loggerLogHardware(LOG_INFO, logBuffer);
 				printf("SYSTEM CALL [%d]: Service handled (Simulation).\n", syscallCode);
 				// In the future an interrupt will be generated here, but the CPU does NOT stop,
 				// it simply continues to the next instruction after being serviced.
@@ -190,11 +210,13 @@ bool handleInterrupt(InterruptCode_t code) {
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: Invalid System Call. Continuing execution.\x1b[0m\n");
 			#endif
+			loggerLogHardware(LOG_ERROR, "Exception: Invalid System Call code");
 			return true;
 		case IC_INVALID_INT_CODE:
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: Invalid Interrupt Code. Continuing execution.\x1b[0m\n");
 			#endif
+			loggerLogHardware(LOG_ERROR, "Exception: Unknown Interrupt Code received");
 			return true;
 	}
 	return false;
@@ -283,6 +305,8 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 			break;
 		case OP_DIVI:
 			if (operandIntValue == 0) {
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "Arithmetic Error: Division by zero at PC %03d", CPU.PSW.pc);
+				loggerLogHardware(LOG_ERROR, logBuffer);
 				raiseInterrupt(IC_INVALID_INSTR);
 				CPU.PSW.conditionCode = CC_OVERFLOW;
 				return INSTR_EXEC_FAIL;
@@ -536,6 +560,8 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 			DMA.pending = true;
 			pthread_cond_signal(&DMA_COND);
 			pthread_mutex_unlock(&BUS_LOCK);
+			snprintf(logBuffer, LOG_BUFFER_SIZE, "DMA Started: Track %d, Cyl %d, Sect %d -> RAM %d", DMA.track, DMA.cylinder, DMA.sector, DMA.memAddr);
+			loggerLogHardware(LOG_INFO, logBuffer);
 			while (DMA.pending) {
 				usleep(1000); // Simulates blocked program state until DMA completes
 			}
@@ -556,12 +582,14 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 
  
 InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
+	MemoryStatus_t ret = MEM_SUCCESS;
 
 	if (instruction.opCode == OP_PSH) {
 		if (CPU.SP - 1 < CPU.RX) {
 			raiseInterrupt(IC_INVALID_ADDR);
 			return INSTR_EXEC_FAIL;
 		}
+		ret = writeMemory(CPU.SP, CPU.AC);
 		CPU.SP -= 1;
 	} else if (instruction.opCode == OP_POP) {
 		if (CPU.SP + CPU.RB >= CPU.RL) {
@@ -569,9 +597,15 @@ InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
 			return INSTR_EXEC_FAIL;
 		}
 		CPU.SP += 1;
+		readMemory(CPU.SP, &CPU.AC);
 		updatePSWFlags();
 	} else {
 		raiseInterrupt(IC_INVALID_INSTR);
+		return INSTR_EXEC_FAIL;
+	}
+
+	if (ret != MEM_SUCCESS) {
+		raiseInterrupt(IC_INVALID_ADDR);
 		return INSTR_EXEC_FAIL;
 	}
 
@@ -767,4 +801,5 @@ void cpuReset(void) {
 	CPU = (CPU_t){0};
 	interruptBitmap = 0;
 	interruptValue = 0;
+	loggerLogHardware(LOG_INFO, "CPU Reset: All registers and flags cleared");
 }

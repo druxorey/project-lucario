@@ -6,8 +6,12 @@
 
 #include "../inc/logger.h"
 
-const char* LOG_FILE_NAME = "logs.txt";
-FILE* logFile = NULL;
+const char* HARDWARE_LOG_FILE_NAME = "logs_hardware.txt";
+const char* KERNEL_LOG_FILE_NAME = "logs_kernel.txt";
+
+FILE* hardwareLogFile = NULL;
+FILE* kernelLogFile = NULL;
+
 static pthread_mutex_t LOG_LOCK = PTHREAD_MUTEX_INITIALIZER;
 
 static void getCurrentTimeString(char* buffer, size_t size) {
@@ -20,30 +24,15 @@ static void getCurrentTimeString(char* buffer, size_t size) {
 }
 
 
-void loggerInit(void) {
+static void saveInLogFile(LogLevel_t level, const char* message, LogType_t logType) {
+	FILE* targetFile = (logType == KERNEL_LOG) ? kernelLogFile : hardwareLogFile;
+
+	if (targetFile == NULL) return;
+
 	pthread_mutex_lock(&LOG_LOCK);
-	logFile = fopen(LOG_FILE_NAME, "a");
-	pthread_mutex_unlock(&LOG_LOCK);
-}
-
-
-void loggerClose(void) {
-	pthread_mutex_lock(&LOG_LOCK);
-	if (logFile != NULL) {
-		fclose(logFile);
-		logFile = NULL;
-	}
-	pthread_mutex_unlock(&LOG_LOCK);
-}
-
-
-void loggerLog(LogLevel_t level, const char* message) {
-	pthread_mutex_lock(&LOG_LOCK);
-	logFile = fopen(LOG_FILE_NAME, "a");
-	if (logFile != NULL) {
-		char timeBuffer[32];
-		getCurrentTimeString(timeBuffer, sizeof(timeBuffer));
-		char* prefix = ":";
+	char timeBuffer[32];
+	getCurrentTimeString(timeBuffer, sizeof(timeBuffer));
+	const char* prefix = ":";
 
 		switch (level) {
 			case LOG_INFO:
@@ -57,12 +46,41 @@ void loggerLog(LogLevel_t level, const char* message) {
 				break;
 		}
 
-		fprintf(logFile, "[%s]%s %s\n", timeBuffer, prefix, message);
-		fflush(logFile);
-		fclose(logFile);
-		logFile = NULL;
+	fprintf(targetFile, "[%s]%s %s\n", timeBuffer, prefix, message);
+	fflush(targetFile);
+	pthread_mutex_unlock(&LOG_LOCK);
+}
+
+
+void loggerInit(void) {
+	pthread_mutex_lock(&LOG_LOCK);
+	hardwareLogFile = fopen(HARDWARE_LOG_FILE_NAME, "a");
+	kernelLogFile = fopen(KERNEL_LOG_FILE_NAME, "a");
+	pthread_mutex_unlock(&LOG_LOCK);
+}
+
+
+void loggerClose(void) {
+	pthread_mutex_lock(&LOG_LOCK);
+	if (hardwareLogFile != NULL) {
+		fclose(hardwareLogFile);
+		hardwareLogFile = NULL;
+	}
+	if (kernelLogFile != NULL) {
+		fclose(kernelLogFile);
+		kernelLogFile = NULL;
 	}
 	pthread_mutex_unlock(&LOG_LOCK);
+}
+
+
+void loggerLogHardware(LogLevel_t level, const char* message) {
+	saveInLogFile(level, message, HARDWARE_LOG);
+}
+
+
+void loggerLogKernel(LogLevel_t level, const char* message) {
+	saveInLogFile(level, message, KERNEL_LOG);
 }
 
 
@@ -92,11 +110,11 @@ void loggerLogInterrupt(InterruptCode_t code) {
 	}
 
 	if (isError) {
-		loggerLog(LOG_ERROR, message);
+		loggerLogHardware(LOG_ERROR, message);
 		printf("\x1b[31m[ERROR]\x1b[0m: %s\n", message);
 	} else {
-		loggerLog(LOG_WARNING, message);
+		loggerLogHardware(LOG_WARNING, message);
 		printf("\x1b[33m[WARN]\x1b[0m: %s\n", message);
 	}
-	fflush(logFile);
+	fflush(hardwareLogFile);
 }

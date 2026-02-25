@@ -8,9 +8,9 @@
 
 #include "../inc/definitions.h"
 #include "../inc/console.h"
-#include "../inc/loader.h"
 #include "../inc/logger.h"
-#include "../inc/cpu.h"
+#include "../inc/hardware/cpu.h"
+#include "../inc/kernel/loader.h"
 
 static char logBuffer[LOG_BUFFER_SIZE];
 
@@ -109,8 +109,10 @@ static void printFilesList(void) {
 		closedir(actualDirectory);
 	} else {
 		printf("Error: Could not open directory\n");
+		loggerLogKernel(LOG_ERROR, "Failed to open current directory for LIST command");
 		return;
 	}
+	loggerLogKernel(LOG_INFO, "User requested directory listing (LIST)");
 }
 
 
@@ -141,7 +143,7 @@ CommandStatus_t parseInput(char* input, char* command, char* argument) {
 CommandStatus_t handleLoadCommand(char* argument) {
 	if (strlen(argument) == 0) {
 		printf("Error: Missing filename\n");
-		loggerLog(LOG_WARNING, "User attempted to load program without filename argument");
+		loggerLogKernel(LOG_WARNING, "User attempted to load program without filename argument");
 		return CMD_MISSING_ARGS;
 	}
 
@@ -154,13 +156,13 @@ CommandStatus_t handleLoadCommand(char* argument) {
 	if (info.status == LOAD_SUCCESS) {
 		printf("File '%s' loaded successfully\n", argument);
 		snprintf(logBuffer, sizeof(logBuffer), "Program loaded: %s (Words: %d, Start: %d)", argument, info.wordCount, info._start);
-		loggerLog(LOG_INFO, logBuffer);
+		loggerLogKernel(LOG_INFO, logBuffer);
 		return CMD_SUCCESS;
 	}
 
 	printf("Error loading file\n");
 	snprintf(logBuffer, sizeof(logBuffer), "Failed to load program file: %s", argument);
-	loggerLog(LOG_ERROR, logBuffer);
+	loggerLogKernel(LOG_ERROR, logBuffer);
 	return CMD_LOAD_ERROR;
 }
 
@@ -172,11 +174,11 @@ CommandStatus_t handleRunCommand(char* argument) {
 	if (loadStatus != CMD_SUCCESS) return loadStatus;
 	
 	printf("Executing in Normal Mode...\n");
-	loggerLog(LOG_INFO, "Starting execution in Normal Mode");
+	loggerLogKernel(LOG_INFO, "Starting execution in Normal Mode");
 
 	if (cpuRun() == 0) {
 		printf("Execution finished successfully\n");
-		loggerLog(LOG_INFO, "Normal Mode execution finished successfully");
+		loggerLogKernel(LOG_INFO, "Normal Mode execution finished successfully");
 		return CMD_SUCCESS;
 	}
 
@@ -184,7 +186,7 @@ CommandStatus_t handleRunCommand(char* argument) {
 	printf("\x1b[36m[DEBUG]: RUN execution terminated abnormally.\x1b[0m\n");
 	#endif
 	
-	loggerLog(LOG_ERROR, "Normal Mode execution terminated abnormally");
+	loggerLogKernel(LOG_ERROR, "Normal Mode execution terminated abnormally");
 	return CMD_RUNTIME_ERROR;
 }
 
@@ -196,7 +198,7 @@ CommandStatus_t handleDebugCommand(char* argument) {
 	if (loadStatus != CMD_SUCCESS) return loadStatus;
 
 	printf("Executing in Debug Mode...\n");
-	loggerLog(LOG_INFO, "Starting execution in Debug Mode.");
+	loggerLogKernel(LOG_INFO, "Starting execution in Debug Mode.");
 
 	char debugBuf[CONSOLE_BUFFER_SIZE];
 	bool isRunning = true;
@@ -224,14 +226,14 @@ CommandStatus_t handleDebugCommand(char* argument) {
 
 			if (!active) {
 				printf("\x1b[31mPROGRAM HALTED\x1b[0m\n");
-				loggerLog(LOG_INFO, "Debug Mode session finished (CPU Halted).");
+				loggerLogKernel(LOG_INFO, "Debug Mode session finished (CPU Halted).");
 				return CMD_SUCCESS;
 			}
 		} else if (strcmp(cmd, "REGS") == 0) {
 			printFullRegisters();
 		} else if (strcmp(cmd, "QUIT") == 0) {
 			printf("Exiting debugger...\n");
-			loggerLog(LOG_INFO, "Debug Mode session aborted by user.");
+			loggerLogKernel(LOG_INFO, "Debug Mode session aborted by user.");
 			isRunning = false;
 		} else {
 			printf("Unknown debug command. Use: STEP, REGS, QUIT.\n");
@@ -254,11 +256,15 @@ ConsoleStatus_t consoleStart(void) {
 	printf("  █     █  █  █     █  █  █  █   █   █  █     █  █ █     █      █   \n");
 	printf("  ▀▀▀▀  ▀▀▀▀  ▀▀▀▀  ▀  ▀  ▀  ▀  ▀▀▀  ▀▀▀▀     ▀  ▀ ▀▀▀▀  ▀      ▀▀▀▀\n");
 
+	loggerLogKernel(LOG_INFO, "Console interface initialized and ready");
 	printCommandList();
 	
 	while(true) {
 		printf("\x1b[35mLUCARIO\x1b[0m > ");
-		if (fgets(buffer, sizeof(buffer), stdin) == NULL) break;
+		if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+			loggerLogKernel(LOG_ERROR, "Input stream closed or failed (stdin)");
+			break;
+		}
 		
 		CommandStatus_t output = CMD_SUCCESS;
 		CommandStatus_t parseStatus = parseInput(buffer, command, argument);
@@ -266,7 +272,7 @@ ConsoleStatus_t consoleStart(void) {
 		if (parseStatus == CMD_EMPTY) continue;
 
 		if (strcmp(command, "EXIT") == 0) {
-			loggerLog(LOG_INFO, "System shutdown requested via CLI (EXIT command)");
+			loggerLogKernel(LOG_INFO, "System shutdown requested via CLI (EXIT command)");
 			#ifdef DEBUG
 			printf("\x1b[36m[DEBUG]: EXIT command received. Shutting down console.\x1b[0m\n");
 			#endif
@@ -282,7 +288,7 @@ ConsoleStatus_t consoleStart(void) {
 		} else {
 			printf("Unknown command: %s\n", command);
 			snprintf(logBuffer, sizeof(logBuffer), "Unknown command received: %s", command);
-			loggerLog(LOG_WARNING, logBuffer);
+			loggerLogKernel(LOG_WARNING, logBuffer);
 			output = CMD_UNKNOWN;
 		}
 		#ifdef DEBUG

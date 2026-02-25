@@ -2,8 +2,8 @@
 
 #include "../lib/utest.h"
 #include "../inc/console.h"
-#include "../inc/loader.h"
 #include "../inc/logger.h"
+#include "../inc/kernel/loader.h"
 
 static char spyLastFileName[CONSOLE_BUFFER_SIZE];
 static int spyCpuRunCallCount = 0;

@@ -9,7 +9,7 @@
 #ifndef DMA_H
 #define DMA_H
 
-#include "../inc/definitions.h"
+#include "../../inc/definitions.h"
 
 /** @brief Status codes for DMA operations
  * Indicates success or cause of failure of DMA operations.

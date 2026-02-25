@@ -1,6 +1,7 @@
 #include <stdbool.h>
+
 #include "../lib/utest.h"
-#include "../inc/memory.h"
+#include "../inc/hardware/memory.h"
 
 // Global mock CPU instance
 CPU_t CPU;
