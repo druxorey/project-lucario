@@ -2,9 +2,9 @@
 
 #include "../inc/definitions.h"
 #include "../inc/logger.h"
-#include "../inc/memory.h"
 #include "../inc/console.h"
-#include "../inc/dma.h"
+#include "../inc/hardware/dma.h"
+#include "../inc/hardware/memory.h"
 
 CPU_t CPU;
 

@@ -4,9 +4,9 @@
 #include <time.h>
 #include <stdlib.h>
 
-#include "../inc/dma.h"
-#include "../inc/cpu.h"
-#include "../inc/memory.h"
+#include "../../inc/hardware/dma.h"
+#include "../../inc/hardware/cpu.h"
+#include "../../inc/hardware/memory.h"
 
 DMA_t DMA;
 pthread_cond_t DMA_COND;

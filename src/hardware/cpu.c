@@ -4,9 +4,9 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#include "../inc/logger.h"
-#include "../inc/cpu.h"
-#include "../inc/memory.h"
+#include "../../inc/logger.h"
+#include "../../inc/hardware/cpu.h"
+#include "../../inc/hardware/memory.h"
 
 static uint16_t interruptBitmap = 0;
 static int64_t interruptValue = 0;

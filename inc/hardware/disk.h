@@ -10,7 +10,7 @@
 
 #ifndef DISK_H
 #define DISK_H
-#include "../inc/definitions.h"
+#include "../../inc/definitions.h"
 
 /**
  * @brief Status codes for disk operations.

@@ -1,8 +1,8 @@
 #include <stdbool.h>
 
-#include "../inc/disk.h"
-#include "../inc/logger.h"
-#include "../inc/definitions.h"
+#include "../../inc/definitions.h"
+#include "../../inc/logger.h"
+#include "../../inc/hardware/disk.h"
 
 Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];
 

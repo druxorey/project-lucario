@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#include "../inc/memory.h"
-#include "../inc/logger.h"
+#include "../../inc/logger.h"
+#include "../../inc/hardware/memory.h"
 
 word RAM[RAM_SIZE];
 pthread_mutex_t BUS_LOCK;

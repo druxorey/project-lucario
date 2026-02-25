@@ -12,7 +12,7 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include "../inc/definitions.h"
+#include "../../inc/definitions.h"
 
 /**
  * @brief CPU Status Codes.

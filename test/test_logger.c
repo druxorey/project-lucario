@@ -1,4 +1,5 @@
 #include <stdbool.h>
+
 #include "../lib/utest.h"
 #include "../inc/logger.h"
 

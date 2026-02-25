@@ -12,7 +12,7 @@
 #define LOADER_H
 
 #include <stdio.h>
-#include "../inc/definitions.h"
+#include "../../inc/definitions.h"
 
 /**
  * @brief Loader Status Codes.

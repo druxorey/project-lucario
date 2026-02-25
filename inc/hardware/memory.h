@@ -11,7 +11,7 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
-#include "../inc/definitions.h"
+#include "../../inc/definitions.h"
 
 /**
  * @brief Status codes for memory operations.

@@ -2,9 +2,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "../inc/loader.h"
-#include "../inc/memory.h"
-#include "../inc/logger.h"
+#include "../../inc/logger.h"
+#include "../../inc/hardware/memory.h"
+#include "../../inc/kernel/loader.h"
 
 word readProgramWord(FILE* filePtr) {
 	char line[512];

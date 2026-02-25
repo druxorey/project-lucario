@@ -8,9 +8,9 @@
 
 #include "../inc/definitions.h"
 #include "../inc/console.h"
-#include "../inc/loader.h"
 #include "../inc/logger.h"
-#include "../inc/cpu.h"
+#include "../inc/hardware/cpu.h"
+#include "../inc/kernel/loader.h"
 
 static char logBuffer[LOG_BUFFER_SIZE];
 

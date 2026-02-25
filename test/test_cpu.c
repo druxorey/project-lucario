@@ -1,7 +1,8 @@
 #include <stdbool.h>
+
 #include "../lib/utest.h"
-#include "../inc/cpu.h"
-#include "../inc/memory.h"
+#include "../inc/hardware/cpu.h"
+#include "../inc/hardware/memory.h"
 
 CPU_t CPU;
 DMA_t DMA;
