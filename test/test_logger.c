@@ -11,7 +11,7 @@ void* threadLogAction(void* arg) {
 	for (int i = 0; i < 100; i++) {
 		char message[64];
 		snprintf(message, sizeof(message), "Message %d from thread %d", i, value);
-		loggerLog(LOG_INFO, message);
+		loggerLogHardware(LOG_INFO, message);
 	}
 	free(arg);
 	return NULL;
@@ -30,7 +30,7 @@ UTEST(Logger, LogFileCreation) {
 // Verify that log entries are correctly written to the log file
 UTEST(Logger, LogFileUpdate) {
 	loggerInit();
-	loggerLog(LOG_ERROR, "Writing test log entry");
+	loggerLogHardware(LOG_ERROR, "Writing test log entry");
 	loggerClose();
 	
 	FILE *f = fopen("logs.txt", "r");

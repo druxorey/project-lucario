@@ -7,10 +7,11 @@
 
 word RAM[RAM_SIZE];
 pthread_mutex_t BUS_LOCK;
+static char logBuffer[LOG_BUFFER_SIZE];
 
 void memoryInit(void) {
 	pthread_mutex_init(&BUS_LOCK, NULL);
-	loggerLog(LOG_INFO, "Memory Subsystem Initialized");
+	loggerLogHardware(LOG_INFO, "Memory Subsystem Initialized");
 }
 
 
@@ -63,13 +64,13 @@ MemoryStatus_t readMemory(address logicalAddr, word* outData) {
 		pthread_mutex_unlock(&BUS_LOCK);
 		
 		if (status == MEM_ERR_PROTECTION) {
-			loggerLog(LOG_ERROR, "Segmentation Fault (READ):");
-			snprintf(logBuffer, sizeof(logBuffer), "Access Violation at LogicAddr [%d]. Limits [RB:%d, RL:%d]", logicalAddr, CPU.RB, CPU.RL);
-			loggerLog(LOG_ERROR, logBuffer);
+			loggerLogHardware(LOG_ERROR, "Segmentation Fault (READ):");
+			snprintf(logBuffer, LOG_BUFFER_SIZE, "Access Violation at LogicAddr [%d]. Limits [RB:%d, RL:%d]", logicalAddr, CPU.RB, CPU.RL);
+			loggerLogHardware(LOG_ERROR, logBuffer);
 		} else {
-			loggerLog(LOG_ERROR, "Bus Error (READ): ");
-			snprintf(logBuffer, sizeof(logBuffer), "Physical Address translation failed for LogicAddr [%d]", logicalAddr);
-			loggerLog(LOG_ERROR, logBuffer);
+			loggerLogHardware(LOG_ERROR, "Bus Error (READ): ");
+			snprintf(logBuffer, LOG_BUFFER_SIZE, "Physical Address translation failed for LogicAddr [%d]", logicalAddr);
+			loggerLogHardware(LOG_ERROR, logBuffer);
 		}
 		return status;
 	}
@@ -79,6 +80,8 @@ MemoryStatus_t readMemory(address logicalAddr, word* outData) {
 	#ifdef DEBUG
 	printf("\x1b[36m[DEBUG]: Mem READ: Logic[%d] -> Phys[%d] = Val[%d]\x1b[0m\n", logicalAddr, physAddr, *outData);
 	#endif
+	snprintf(logBuffer, sizeof(logBuffer), "READ: Logical[%d] -> Physical[%d] = Value[%d]", logicalAddr, physAddr, *outData);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_SUCCESS;
@@ -96,9 +99,9 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 	// Validate data structure (Sign bit + 7 magnitude digits)
 	if (!IS_VALID_INSTRUCTION(data)) {
 		pthread_mutex_unlock(&BUS_LOCK);
-		loggerLog(LOG_ERROR, "Memory Data Error: ");
+		loggerLogHardware(LOG_ERROR, "Memory Data Error: ");
 		snprintf(logBuffer, sizeof(logBuffer), "Attempted to write invalid word [%d]. Max magnitude is 7 digits.", data);
-		loggerLog(LOG_ERROR, logBuffer);
+		loggerLogHardware(LOG_ERROR, logBuffer);
 		return MEM_ERR_INVALID_DATA;
 	}
 
@@ -109,13 +112,13 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 		pthread_mutex_unlock(&BUS_LOCK);
 		
 		if (status == MEM_ERR_PROTECTION) {
-		loggerLog(LOG_ERROR, "Segmentation Fault (WRITE): ");
+		loggerLogHardware(LOG_ERROR, "Segmentation Fault (WRITE): ");
 			snprintf(logBuffer, sizeof(logBuffer), "Access Violation at LogicAddr [%d]. Limits [RB:%d, RL:%d]", logicalAddr, CPU.RB, CPU.RL);
-			loggerLog(LOG_ERROR, logBuffer);
+			loggerLogHardware(LOG_ERROR, logBuffer);
 		} else {
-		loggerLog(LOG_ERROR, "Bus Error (WRITE): ");
+		loggerLogHardware(LOG_ERROR, "Bus Error (WRITE): ");
 			snprintf(logBuffer, sizeof(logBuffer), "Physical Address translation failed for LogicAddr [%d]", logicalAddr);
-			loggerLog(LOG_ERROR, logBuffer);
+			loggerLogHardware(LOG_ERROR, logBuffer);
 		}
 		return status;
 	}
@@ -125,6 +128,8 @@ MemoryStatus_t writeMemory(address logicalAddr, word data) {
 	#ifdef DEBUG
 	printf("\x1b[36m[DEBUG]: Mem WRITE: Logic[%d] -> Phys[%d] = Val[%d]\x1b[0m\n", logicalAddr, physAddr, data);
 	#endif
+	snprintf(logBuffer, sizeof(logBuffer), "WRITE: Logical[%d] -> Physical[%d] = Value[%d]", logicalAddr, physAddr, data);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	pthread_mutex_unlock(&BUS_LOCK);
 	return MEM_SUCCESS;

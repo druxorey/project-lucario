@@ -16,14 +16,14 @@ int main() {
     pthread_create(&dmaThread, NULL, &dmaInit, NULL);
 	pthread_detach(dmaThread);
 	
-	loggerLog(LOG_INFO, "System Boot sequence initiated");
+	loggerLogHardware(LOG_INFO, "System Boot sequence initiated");
 
 	ConsoleStatus_t consoleStatus = consoleStart();
 
 	if (consoleStatus == CONSOLE_SUCCESS) {
-		loggerLog(LOG_INFO, "System Shutdown completed successfully");
+		loggerLogHardware(LOG_INFO, "System Shutdown completed successfully");
 	} else if (consoleStatus == CONSOLE_RUNTIME_ERROR) {
-		loggerLog(LOG_ERROR, "System Shutdown incorrectly");
+		loggerLogHardware(LOG_ERROR, "System Shutdown incorrectly");
 	}
 
 	loggerClose();

@@ -14,7 +14,8 @@
 bin/*
 obj/*
 docs/report/*
-logs.txt
+logs_hardware.txt
+logs_kernel.txt
 test_program.txt
 large_test_program.txt
 .vscode
