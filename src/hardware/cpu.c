@@ -556,12 +556,14 @@ InstructionStatus_t executeDMAInstruction(Instruction_t instruction) {
 
  
 InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
+	MemoryStatus_t ret = MEM_SUCCESS;
 
 	if (instruction.opCode == OP_PSH) {
 		if (CPU.SP - 1 < CPU.RX) {
 			raiseInterrupt(IC_INVALID_ADDR);
 			return INSTR_EXEC_FAIL;
 		}
+		ret = writeMemory(CPU.SP, CPU.AC);
 		CPU.SP -= 1;
 	} else if (instruction.opCode == OP_POP) {
 		if (CPU.SP + CPU.RB >= CPU.RL) {
@@ -569,9 +571,15 @@ InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
 			return INSTR_EXEC_FAIL;
 		}
 		CPU.SP += 1;
+		readMemory(CPU.SP, &CPU.AC);
 		updatePSWFlags();
 	} else {
 		raiseInterrupt(IC_INVALID_INSTR);
+		return INSTR_EXEC_FAIL;
+	}
+
+	if (ret != MEM_SUCCESS) {
+		raiseInterrupt(IC_INVALID_ADDR);
 		return INSTR_EXEC_FAIL;
 	}
 
