@@ -589,15 +589,15 @@ InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
 			raiseInterrupt(IC_INVALID_ADDR);
 			return INSTR_EXEC_FAIL;
 		}
-		ret = writeMemory(CPU.SP, CPU.AC);
 		CPU.SP -= 1;
+		ret = writeMemory(CPU.SP, CPU.AC);
 	} else if (instruction.opCode == OP_POP) {
 		if (CPU.SP + CPU.RB >= CPU.RL) {
 			raiseInterrupt(IC_INVALID_ADDR);
 			return INSTR_EXEC_FAIL;
 		}
-		CPU.SP += 1;
 		readMemory(CPU.SP, &CPU.AC);
+		CPU.SP += 1;
 		updatePSWFlags();
 	} else {
 		raiseInterrupt(IC_INVALID_INSTR);
