@@ -67,17 +67,70 @@ static void printFullRegisters(void) {
 }
 
 
-static void printCommandList(void) {
-	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m\n");
-	printf("  \x1b[1mRUN <file>\x1b[0m     : Execute program in Normal Mode\n");
-	printf("  \x1b[1mDEBUG <file>\x1b[0m   : Execute program in Debug Mode\n");
-	printf("  \x1b[1mLIST\x1b[0m           : List the files in the current directory\n");
-	printf("  \x1b[1mEXIT\x1b[0m           : Shutdown the system\n");
-	printf("  \x1b[1mCOMANDS\x1b[0m        : Show this list\n\n");
+static CommandStatus_t printCommandList(void) {
+	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m");
+	printf(" run, debug, list, ps, memstat, monitor, restart,\n  shutdown, commands, help\n");
+	printf("\n  Use \x1b[1mhelp <command>\x1b[0m for detailed information.\n\n");
+	return CMD_SUCCESS;
 }
 
 
-static void printFilesList(void) {
+static CommandStatus_t handleHelpCommand(char* argument) {
+	if (argument == NULL || strlen(argument) == 0) {
+		printf("Usage: help <command>\nAvailable commands: run, debug, list, ps, memstat, monitor, restart, shutdown, commands, help\n");
+		return CMD_SUCCESS;
+	}
+
+	printf("\n\x1b[1;34mMANUAL: %s\x1b[0m\n", argument);
+	if (strcmp(argument, "run") == 0) {
+		printf("Description: Executes programs in Normal Mode.\n");
+		printf("Usage:       run <file1> [file2] ... [file20]\n");
+		printf("Arguments:   Accepts 1 to 20 program files.\n");
+	} else if (strcmp(argument, "debug") == 0) {
+		printf("Description: Executes a single program in Debug Mode with step-by-step control.\n");
+		printf("Usage:       debug <file>\n");
+		printf("Arguments:   Exactly 1 program file.\n");
+	} else if (strcmp(argument, "ps") == 0) {
+		printf("Description: Displays all active processes in the system, showing PID, state, memory percentage, and program name.\n");
+		printf("Usage:       ps\n");
+		printf("Arguments:   None.\n");
+	} else if (strcmp(argument, "memstat") == 0) {
+		printf("Description: Shows the physical memory content and the current usage percentage.\n");
+		printf("Usage:       memstat\n");
+		printf("Arguments:   None.\n");
+	} else if (strcmp(argument, "monitor") == 0) {
+		printf("Description: Opens a secondary terminal to display the Input/Output of running programs.\n");
+		printf("Usage:       monitor\n");
+		printf("Arguments:   None.\n");
+	} else if (strcmp(argument, "list") == 0) {
+		printf("Description: Lists all files available in the current directory.\n");
+		printf("Usage:       list\n");
+		printf("Arguments:   None.\n");
+	} else if (strcmp(argument, "restart") == 0) {
+		printf("Description: Reboots the Lucario System.\n");
+		printf("Usage:       restart\n");
+		printf("Arguments:   None.\n");
+	} else if (strcmp(argument, "shutdown") == 0) {
+		printf("Description: Safely shuts down the system and exits the simulator.\n");
+		printf("Usage:       shutdown\n");
+		printf("Arguments:   None.\n");
+	} else if (strcmp(argument, "commands") == 0) {
+		printf("Description: Lists all available commands names.\n");
+		printf("Usage:       commands\n");
+		printf("Arguments:   None.\n");
+	} else if (strcmp(argument, "help") == 0) {
+		printf("Description: Provides detailed information about a specific command.\n");
+		printf("Usage:       help <command>\n");
+		printf("Arguments:   1 command name.\n");
+	} else {
+		printf("\x1b[1;31mNo manual entry for:\x1b[0m %s\n", argument);
+	}
+	printf("\n");
+	return CMD_SUCCESS;
+}
+
+
+static CommandStatus_t printFilesList(void) {
 	DIR *actualDirectory;
 	struct dirent *dir;
 	char **files = NULL;
@@ -92,9 +145,9 @@ static void printFilesList(void) {
 
 			char **temp = realloc(files, (count + 1) * sizeof(char *));
 			if (temp == NULL) {
-				perror("Error: Could not allocate memory for file list");
+				perror("\x1b[1;31mError: Could not allocate memory for file list\x1b[0m");
 				closedir(actualDirectory);
-				return;
+				return CMD_RUNTIME_ERROR;
 			}
 			files = temp;
 			files[count] = malloc(strlen(dir->d_name) + 1);
@@ -108,11 +161,12 @@ static void printFilesList(void) {
 		free(files);
 		closedir(actualDirectory);
 	} else {
-		printf("Error: Could not open directory\n");
 		loggerLogKernel(LOG_ERROR, "Failed to open current directory for LIST command");
-		return;
+		printf("\x1b[1;31mError: Could not open directory\x1b[0m");
+		return CMD_RUNTIME_ERROR;
 	}
 	loggerLogKernel(LOG_INFO, "User requested directory listing (LIST)");
+	return CMD_SUCCESS;
 }
 
 
@@ -139,7 +193,10 @@ CommandStatus_t parseInput(char* input, char* command, char** args, int* argCoun
 	}
 
 	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Parsed -> Command: [%s]; Argument: [%s] \x1b[0m\n", command, argument);
+	printf("\x1b[36m[DEBUG]: Parsed -> Command: [%s]; Args Count: [%d]\x1b[0m\n", command, *argCount);
+	for (int i = 0; i < *argCount; i++) {
+		printf("\x1b[36m[DEBUG]: Arg[%d]: [%s]\x1b[0m\n", i, args[i]);
+	}
 	#endif
 
 	return CMD_SUCCESS;
@@ -148,27 +205,23 @@ CommandStatus_t parseInput(char* input, char* command, char** args, int* argCoun
 
 CommandStatus_t handleLoadCommand(char* argument) {
 	if (strlen(argument) == 0) {
-		printf("Error: Missing filename\n");
 		loggerLogKernel(LOG_WARNING, "User attempted to load program without filename argument");
+		printf("\x1b[1;31mError: Missing filename\x1b[0m\n");
 		return CMD_MISSING_ARGS;
 	}
 
 	ProgramInfo_t info = loadProgram(argument);
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Program load processed. Status = [%d]\x1b[0m\n", info.status);
-	#endif
-
 	if (info.status == LOAD_SUCCESS) {
-		printf("File '%s' loaded successfully\n", argument);
 		snprintf(logBuffer, sizeof(logBuffer), "Program loaded: %s (Words: %d, Start: %d)", argument, info.wordCount, info._start);
 		loggerLogKernel(LOG_INFO, logBuffer);
+		printf("File '%s' loaded successfully\n", argument);
 		return CMD_SUCCESS;
 	}
 
-	printf("Error loading file\n");
 	snprintf(logBuffer, sizeof(logBuffer), "Failed to load program file: %s", argument);
 	loggerLogKernel(LOG_ERROR, logBuffer);
+	printf("\x1b[1;31mError: Loading file failed\x1b[0m\n");
 	return CMD_LOAD_ERROR;
 }
 
@@ -188,11 +241,8 @@ CommandStatus_t handleRunCommand(char* argument) {
 		return CMD_SUCCESS;
 	}
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: RUN execution terminated abnormally.\x1b[0m\n");
-	#endif
-	
 	loggerLogKernel(LOG_ERROR, "Normal Mode execution terminated abnormally");
+	printf("\x1b[1;31mError: Normal Mode execution terminated abnormally\x1b[0m\n");
 	return CMD_RUNTIME_ERROR;
 }
 
@@ -210,9 +260,9 @@ CommandStatus_t handleDebugCommand(char* argument) {
 	bool isRunning = true;
 	
 	printf("\n\x1b[32mDEBUGGER COMMANDS:\x1b[0m\n");
-	printf("  \x1b[1mSTEP\x1b[0m (or ENTER) : Execute next instruction.\n");
-	printf("  \x1b[1mREGS\x1b[0m            : View all registers detailed.\n");
-	printf("  \x1b[1mQUIT\x1b[0m            : Exit debugger (stops execution).\n");
+	printf("  \x1b[1mstep\x1b[0m (or ENTER) : Execute next instruction.\n");
+	printf("  \x1b[1mregs\x1b[0m            : View all registers detailed.\n");
+	printf("  \x1b[1mquit\x1b[0m            : Exit debugger (stops execution).\n");
 
 	printFullRegisters();
 
@@ -224,7 +274,7 @@ CommandStatus_t handleDebugCommand(char* argument) {
 		debugBuf[strcspn(debugBuf, "\n")] = 0;
 		char* cmd = trimWhitespace(debugBuf);
 
-		if (strlen(cmd) == 0 || strcmp(cmd, "STEP") == 0) {
+		if (strlen(cmd) == 0 || strcmp(cmd, "step") == 0) {
 			int currentPC = CPU.PSW.pc;
 			bool active = cpuStep();
 
@@ -235,14 +285,14 @@ CommandStatus_t handleDebugCommand(char* argument) {
 				loggerLogKernel(LOG_INFO, "Debug Mode session finished (CPU Halted).");
 				return CMD_SUCCESS;
 			}
-		} else if (strcmp(cmd, "REGS") == 0) {
+		} else if (strcmp(cmd, "regs") == 0) {
 			printFullRegisters();
-		} else if (strcmp(cmd, "QUIT") == 0) {
+		} else if (strcmp(cmd, "quit") == 0) {
 			printf("Exiting debugger...\n");
 			loggerLogKernel(LOG_INFO, "Debug Mode session aborted by user.");
 			isRunning = false;
 		} else {
-			printf("Unknown debug command. Use: STEP, REGS, QUIT.\n");
+			printf("Unknown debug command. Use: step, regs, quit.\n");
 		}
 	}
 	
@@ -273,27 +323,58 @@ ConsoleStatus_t consoleStart(void) {
 		}
 		
 		int argCount = 0;
-		CommandStatus_t output;
+		CommandStatus_t output = CMD_UNKNOWN;
 		CommandStatus_t parseStatus = parseInput(buffer, command, argument, &argCount);
 
 		if (parseStatus == CMD_EMPTY) continue;
 
-		if (strcmp(command, "EXIT") == 0) {
-			loggerLogKernel(LOG_INFO, "System shutdown requested via CLI (EXIT command)");
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: EXIT command received. Shutting down console.\x1b[0m\n");
-			#endif
-			return CONSOLE_SUCCESS;
-		} else if (strcmp(command, "RUN") == 0) {
-			output = handleRunCommand(argument);
-		} else if (strcmp(command, "DEBUG") == 0) {
-			output = handleDebugCommand(argument);
-		} else if (strcmp(command, "LIST") == 0) {
-			printFilesList();
-		} else if (strcmp(command, "COMANDS") == 0) {
-			printCommandList();
+		if (strcmp(command, "shutdown") == 0) {
+			if (argCount > 0) {
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'shutdown' command");
+				printf("\x1b[1;31mError: The 'shutdown' command does not accept arguments\x1b[0m\n");
+			} else {
+				loggerLogKernel(LOG_INFO, "System shutdown requested via CLI (EXIT command)");
+				return CONSOLE_SUCCESS;
+			}
+		} else if (strcmp(command, "run") == 0) {
+			if (argCount == 0) {
+				loggerLogKernel(LOG_WARNING, "Missing arguments for 'run' command");
+				printf("\x1b[1;31mError: Missing program file(s) to execute\x1b[0m\n");
+			} else {
+				output = handleRunCommand(argument[0]);
+			}
+		} else if (strcmp(command, "debug") == 0) {
+			if (argCount == 1) {
+				output = handleDebugCommand(argument[0]);
+			} else if (argCount > 1) {
+				printf("\x1b[1;31mError: Too many arguments for 'debug' command\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'debug' command");
+			} else {
+				printf("\x1b[1;31mError: Missing program file(s) to execute\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Missing arguments for 'debug' command");
+			}
+		} else if (strcmp(command, "list") == 0) {
+			if (argCount > 0) {
+				printf("\x1b[1;31mError: The 'list' command does not accept arguments\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'list' command");
+			} else {
+				output = printFilesList();
+			}
+		} else if (strcmp(command, "commands") == 0) {
+			if (argCount > 0) {
+				printf("\x1b[1;31mError: The 'commands' command does not accept arguments\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'commands' command");
+			} else {
+				output = printCommandList();
+			}
+		} else if (strcmp(command, "help") == 0) {
+			if (argCount > 1) {
+				printf("\x1b[1;31mError: Too many arguments for 'help' command\x1b[0m\n");
+			} else {
+				output = handleHelpCommand(argCount == 1 ? argument[0] : NULL);
+			}
 		} else {
-			printf("Unknown command: %s\n", command);
+			printf("\x1b[1;31mUnknown command:\x1b[0m %s\n", command);
 			snprintf(logBuffer, sizeof(logBuffer), "Unknown command received: %s", command);
 			loggerLogKernel(LOG_WARNING, logBuffer);
 		}
