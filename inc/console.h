@@ -74,7 +74,7 @@ CommandStatus_t handleLoadCommand(char* argument);
  * @param argument The filename string provided by the user.
  * @return CommandStatus_t CMD_SUCCESS if execution finished normally, or CMD_RUNTIME_ERROR.
  */
-CommandStatus_t handleRunCommand(char* argument);
+CommandStatus_t handleRunCommand(char** args, int argCount);
 
 /**
  * @brief Handles the 'DEBUG' command logic.

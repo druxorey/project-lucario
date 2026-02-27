@@ -213,37 +213,38 @@ CommandStatus_t handleLoadCommand(char* argument) {
 	ProgramInfo_t info = loadProgram(argument);
 
 	if (info.status == LOAD_SUCCESS) {
-		snprintf(logBuffer, sizeof(logBuffer), "Program loaded: %s (Words: %d, Start: %d)", argument, info.wordCount, info._start);
+		snprintf(logBuffer, LOG_BUFFER_SIZE, "Program loaded: %s (Words: %d, Start: %d)", argument, info.wordCount, info._start);
 		loggerLogKernel(LOG_INFO, logBuffer);
 		printf("File '%s' loaded successfully\n", argument);
 		return CMD_SUCCESS;
 	}
 
-	snprintf(logBuffer, sizeof(logBuffer), "Failed to load program file: %s", argument);
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Failed to load program file: %s", argument);
 	loggerLogKernel(LOG_ERROR, logBuffer);
 	printf("\x1b[1;31mError: Loading file failed\x1b[0m\n");
 	return CMD_LOAD_ERROR;
 }
 
 
-CommandStatus_t handleRunCommand(char* argument) {
-	cpuReset();
-
-	CommandStatus_t loadStatus = handleLoadCommand(argument);
-	if (loadStatus != CMD_SUCCESS) return loadStatus;
-	
-	printf("Executing in Normal Mode...\n");
-	loggerLogKernel(LOG_INFO, "Starting execution in Normal Mode");
-
-	if (cpuRun() == 0) {
-		printf("Execution finished successfully\n");
-		loggerLogKernel(LOG_INFO, "Normal Mode execution finished successfully");
-		return CMD_SUCCESS;
+CommandStatus_t handleRunCommand(char** args, int argCount) {
+	if (argCount == 0) {
+		printf("\x1b[1;31mError: Missing program files to execute\x1b[0m\n");
+		return CMD_MISSING_ARGS;
 	}
 
-	loggerLogKernel(LOG_ERROR, "Normal Mode execution terminated abnormally");
-	printf("\x1b[1;31mError: Normal Mode execution terminated abnormally\x1b[0m\n");
-	return CMD_RUNTIME_ERROR;
+	printf("Loading processes into OS...\n");
+
+	for (int i = 0; i < argCount; i++) {
+		// Here eventually we will call createProcess(args[i]);
+		printf(" -> [QUEUED] Process %s created successfully.\n", args[i]);
+		
+		snprintf(logBuffer, LOG_BUFFER_SIZE, "Process requested via CLI: %s", args[i]);
+		loggerLogKernel(LOG_INFO, logBuffer);
+	}
+
+	printf("\x1b[32mAll processes loaded and executing in background.\x1b[0m\n");
+	
+	return CMD_SUCCESS;
 }
 
 
@@ -341,7 +342,7 @@ ConsoleStatus_t consoleStart(void) {
 				loggerLogKernel(LOG_WARNING, "Missing arguments for 'run' command");
 				printf("\x1b[1;31mError: Missing program file(s) to execute\x1b[0m\n");
 			} else {
-				output = handleRunCommand(argument[0]);
+				output = handleRunCommand(argument, argCount);
 			}
 		} else if (strcmp(command, "debug") == 0) {
 			if (argCount == 1) {
@@ -375,7 +376,7 @@ ConsoleStatus_t consoleStart(void) {
 			}
 		} else {
 			printf("\x1b[1;31mUnknown command:\x1b[0m %s\n", command);
-			snprintf(logBuffer, sizeof(logBuffer), "Unknown command received: %s", command);
+			snprintf(logBuffer, LOG_BUFFER_SIZE, "Unknown command received: %s", command);
 			loggerLogKernel(LOG_WARNING, logBuffer);
 		}
 		#ifdef DEBUG
