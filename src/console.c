@@ -116,22 +116,28 @@ static void printFilesList(void) {
 }
 
 
-CommandStatus_t parseInput(char* input, char* command, char* argument) {
+CommandStatus_t parseInput(char* input, char* command, char** args, int* argCount) {
 	command[0] = '\0';
-	argument[0] = '\0';
-	input[strcspn(input, "\n")] = 0;
+	*argCount = 0;
+
+	input[strcspn(input, "\n")] = '\0';
 	input = trimWhitespace(input);
 
 	if (strlen(input) == 0) return CMD_EMPTY;
 
-	// %s reads one word (up to the first space)
-	// %[^\n] reads "everything up to the newline" (the rest of the string)
-	// The space between %s and %[^\n] consumes the separating space
-	sscanf(input, "%19s %99[^\n]", command, argument);
-	// sscanf returns how many variables it successfully filled
-	// If input is "EXIT", matches will be 1 (argument remains empty)
-	// If input is "RUN file" or "DEBUG file", matches will be 2
-	
+	char* token = strtok(input, " \t");
+	if (token == NULL) return CMD_EMPTY;
+
+	strncpy(command, token, 19);
+	command[19] = '\0';
+
+	token = strtok(NULL, " \t");
+	while (token != NULL && *argCount < MAX_PROCESSES) {
+		args[*argCount] = token;
+		(*argCount)++;
+		token = strtok(NULL, " \t");
+	}
+
 	#ifdef DEBUG
 	printf("\x1b[36m[DEBUG]: Parsed -> Command: [%s]; Argument: [%s] \x1b[0m\n", command, argument);
 	#endif
@@ -247,7 +253,7 @@ CommandStatus_t handleDebugCommand(char* argument) {
 ConsoleStatus_t consoleStart(void) {
 	char buffer[CONSOLE_BUFFER_SIZE];
 	char command[CONSOLE_BUFFER_SIZE];
-	char argument[CONSOLE_BUFFER_SIZE];
+	char* argument[MAX_PROCESSES];
 	
 	printf("\x1b[2J\x1b[H\n");
 
@@ -266,8 +272,9 @@ ConsoleStatus_t consoleStart(void) {
 			break;
 		}
 		
-		CommandStatus_t output = CMD_SUCCESS;
-		CommandStatus_t parseStatus = parseInput(buffer, command, argument);
+		int argCount = 0;
+		CommandStatus_t output;
+		CommandStatus_t parseStatus = parseInput(buffer, command, argument, &argCount);
 
 		if (parseStatus == CMD_EMPTY) continue;
 
@@ -289,7 +296,6 @@ ConsoleStatus_t consoleStart(void) {
 			printf("Unknown command: %s\n", command);
 			snprintf(logBuffer, sizeof(logBuffer), "Unknown command received: %s", command);
 			loggerLogKernel(LOG_WARNING, logBuffer);
-			output = CMD_UNKNOWN;
 		}
 		#ifdef DEBUG
 		printf("\x1b[36m[DEBUG]: Command Output = [%d] \x1b[0m\n", output);
