@@ -10,6 +10,7 @@
 #include "../inc/console.h"
 #include "../inc/logger.h"
 #include "../inc/hardware/cpu.h"
+#include "../inc/hardware/memory.h"
 #include "../inc/kernel/loader.h"
 
 static char logBuffer[LOG_BUFFER_SIZE];
@@ -71,6 +72,7 @@ static void printCommandList(void) {
 	printf("\n\x1b[35mAVAILABLE COMMANDS:\x1b[0m\n");
 	printf("  \x1b[1mRUN <file>\x1b[0m     : Execute program in Normal Mode\n");
 	printf("  \x1b[1mDEBUG <file>\x1b[0m   : Execute program in Debug Mode\n");
+	printf("  \x1b[1mRESTART\x1b[0m        : Restart the system (clears all memory and registers)\n");
 	printf("  \x1b[1mLIST\x1b[0m           : List the files in the current directory\n");
 	printf("  \x1b[1mEXIT\x1b[0m           : Shutdown the system\n");
 	printf("  \x1b[1mCOMANDS\x1b[0m        : Show this list\n\n");
@@ -244,6 +246,13 @@ CommandStatus_t handleDebugCommand(char* argument) {
 }
 
 
+CommandStatus_t handleRestartCommand(void) {
+	cpuReset();
+	memoryReset();
+	loggerLogKernel(LOG_INFO, "System restarted via CLI (restart command).\n");
+	return CMD_SUCCESS;
+}
+
 ConsoleStatus_t consoleStart(void) {
 	char buffer[CONSOLE_BUFFER_SIZE];
 	char command[CONSOLE_BUFFER_SIZE];
@@ -281,6 +290,9 @@ ConsoleStatus_t consoleStart(void) {
 			output = handleRunCommand(argument);
 		} else if (strcmp(command, "DEBUG") == 0) {
 			output = handleDebugCommand(argument);
+		} else if (strcmp(command, "RESTART") == 0) {
+			output = handleRestartCommand();
+			printf("System restarted. All registers and memory cleared.\n");
 		} else if (strcmp(command, "LIST") == 0) {
 			printFilesList();
 		} else if (strcmp(command, "COMANDS") == 0) {

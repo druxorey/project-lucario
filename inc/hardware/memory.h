@@ -60,4 +60,10 @@ MemoryStatus_t dmaReadMemory(address physAddr, word* outData);
  */
 MemoryStatus_t dmaWriteMemory(address physAddr, word data);
 
+/**
+ * @brief Resets the entire memory to its initial state (all zeros).
+ * Used during system restart to ensure a clean slate.
+ */
+void memoryReset(void);
+
 #endif // MEMORY_H
