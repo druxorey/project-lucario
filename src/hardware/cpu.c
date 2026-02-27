@@ -298,10 +298,10 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 			break;
 		case OP_MULT:
 			result = (int64_t)accumulatorValue * operandIntValue;
+			CPU.AC = intToWord(result % (MAX_MAGNITUDE + 1), &CPU.PSW);
 			if (result > MAX_MAGNITUDE || result < -MAX_MAGNITUDE) {
 				CPU.PSW.conditionCode = CC_OVERFLOW;
 			}
-			CPU.AC = intToWord(result % (MAX_MAGNITUDE + 1), &CPU.PSW);
 			break;
 		case OP_DIVI:
 			if (operandIntValue == 0) {
