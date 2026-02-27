@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "../../inc/logger.h"
 #include "../../inc/hardware/memory.h"
@@ -170,4 +171,9 @@ MemoryStatus_t dmaWriteMemory(address physAddr, word data) {
 
     pthread_mutex_unlock(&BUS_LOCK);
     return MEM_SUCCESS;
+}
+
+void memoryReset(void) {
+	memset(RAM, 0, sizeof(RAM));
+	loggerLogHardware(LOG_INFO, "Memory Reset: All RAM positions cleared to 0");
 }

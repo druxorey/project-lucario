@@ -121,3 +121,24 @@ UTEST(Memory, ThreadSafetyCheck) {
 		EXPECT_EQ(i * 10, out);
 	}
 }
+
+// Verify that memoryReset correctly clears all RAM positions to 0.
+UTEST(Memory, MemoryResetFunction) {
+	memoryInit();
+	CPU.PSW.mode = MODE_KERNEL;
+
+	// Fill some memory positions with non-zero values
+	for (int i = 0; i < 10; i++) {
+		writeMemory(i, i + 1);
+	}
+
+	// Reset memory
+	memoryReset();
+
+	// Verify all positions are now 0
+	for (int i = 0; i < 10; i++) {
+		word out;
+		readMemory(i, &out);
+		EXPECT_EQ(0, out);
+	}
+}
