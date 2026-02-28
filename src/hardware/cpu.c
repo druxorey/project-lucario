@@ -31,9 +31,8 @@ static void internalPush(word value) {
 	MemoryStatus_t status = writeMemory(CPU.SP, value);
 	
 	if (status != MEM_SUCCESS) {
-		#ifdef DEBUG
-		printf("\x1b[31m[CRITICAL]: Failed to push context (SP=%d). Error: %d\x1b[0m\n", CPU.SP, status);
-		#endif
+		snprintf(logBuffer, LOG_BUFFER_SIZE, "Failed to push context (SP=%d). Error: %d", CPU.SP, status);
+		loggerLogHardware(LOG_ERROR, logBuffer);
 	}
 }
 
@@ -44,9 +43,8 @@ static word internalPop(void) {
 	MemoryStatus_t status = readMemory(CPU.SP, &value);
 	
 	if (status != MEM_SUCCESS) {
-		#ifdef DEBUG
-		printf("\x1b[31m[CRITICAL]: Failed to pop context (SP=%d). Error: %d\x1b[0m\n", CPU.SP, status);
-		#endif
+		snprintf(logBuffer, LOG_BUFFER_SIZE, "Failed to pop context (SP=%d). Error: %d", CPU.SP, status);
+		loggerLogHardware(LOG_ERROR, logBuffer);
 	}
 
 	CPU.SP += 1;
@@ -55,9 +53,8 @@ static word internalPop(void) {
 
 
 static void saveContext(void) {
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Saving context (SP=%d)\x1b[0m\n", CPU.SP);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Saving context (SP=%d)", CPU.SP);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	internalPush(CPU.RX);
 	internalPush(CPU.RL);
@@ -69,16 +66,11 @@ static void saveContext(void) {
 
 	snprintf(logBuffer, LOG_BUFFER_SIZE, "Context saved: PC=%03d, SP=%d, AC=%d", CPU.PSW.pc, CPU.SP, wordToInt(CPU.AC));
 	loggerLogHardware(LOG_INFO, logBuffer);
-
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Context saved successfully (SP=%d)\x1b[0m\n", CPU.SP);
-	#endif
 }
 
 static void restoreContext(InterruptCode_t codeHandled) {
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Restoring context (SP=%d)\x1b[0m\n", CPU.SP);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Restoring context (SP=%d)", CPU.SP);
+	loggerLogHardware(LOG_INFO, logBuffer);
 	word savedAC = internalPop();
 	
 	if (codeHandled != IC_OVERFLOW && codeHandled != IC_UNDERFLOW) {
@@ -94,10 +86,6 @@ static void restoreContext(InterruptCode_t codeHandled) {
 
 	snprintf(logBuffer, LOG_BUFFER_SIZE, "Context restored: Returning to PC=%03d, SP=%d", CPU.PSW.pc, CPU.SP);
 	loggerLogHardware(LOG_INFO, logBuffer);
-	
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Context restored successfully (SP=%d)\x1b[0m\n", CPU.SP);
-	#endif
 }
 
 
@@ -150,48 +138,27 @@ bool handleInterrupt(InterruptCode_t code) {
 	int syscallCode;
 	switch (code) {
 		case IC_INVALID_INSTR:
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Invalid Instruction. Aborting execution.\x1b[0m\n");
-			#endif
 			loggerLogHardware(LOG_ERROR, "Invalid Instruction: CPU Halt triggered");
 			return false;
 		case IC_INVALID_ADDR:
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Invalid Address. Aborting execution.\x1b[0m\n");
-			#endif
 			loggerLogHardware(LOG_ERROR, "Invalid Memory Address: CPU Halt triggered");
 			return false;
 		case IC_OVERFLOW:
 			CPU.AC = intToWord((interruptValue % (MAX_MAGNITUDE + 1)), &CPU.PSW);
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Overflow detected. Adjusting value - Previous: %ld, New: %d\x1b[0m\n", interruptValue, wordToInt(CPU.AC));
-			#endif
 			snprintf(logBuffer, LOG_BUFFER_SIZE, "Arithmetic Overflow: Previous %ld -> Adjusted to %d", interruptValue, wordToInt(CPU.AC));
 			loggerLogHardware(LOG_INFO, logBuffer);
 			return true;
 		case IC_UNDERFLOW:
 			CPU.AC = intToWord(0, &CPU.PSW);
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Underflow detected. Adjusting value to 0\x1b[0m\n");
-			#endif
 			loggerLogHardware(LOG_INFO, "Arithmetic Underflow: Value clamped to 0");
 			return true;
 		case IC_TIMER: // Simulate program pause
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Timer interrupt triggered. Pausing program.\x1b[0m\n");
-			#endif
 			loggerLogHardware(LOG_INFO, "Timer Interrupt: External clock tick received");
 			return true;
 		case IC_IO_DONE: // Simulate program resume after I/O completion
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: I/O operation completed. Resuming program.\x1b[0m\n");
-			#endif
 			loggerLogHardware(LOG_INFO, "I/O Interrupt: Peripheral operation completed");
 			return true;
 		case IC_SYSCALL:
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Handling System Call.\x1b[0m\n");
-			#endif
 			syscallCode = wordToInt(CPU.AC);
 			if (syscallCode == 0) {
 				loggerLogHardware(LOG_INFO, "SYSCALL [0]: Program requested EXIT");
@@ -207,15 +174,9 @@ bool handleInterrupt(InterruptCode_t code) {
 				return true;
 			}
 		case IC_INVALID_SYSCALL:
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Invalid System Call. Continuing execution.\x1b[0m\n");
-			#endif
 			loggerLogHardware(LOG_ERROR, "Exception: Invalid System Call code");
 			return true;
 		case IC_INVALID_INT_CODE:
-			#ifdef DEBUG
-			printf("\x1b[36m[DEBUG]: Invalid Interrupt Code. Continuing execution.\x1b[0m\n");
-			#endif
 			loggerLogHardware(LOG_ERROR, "Exception: Unknown Interrupt Code received");
 			return true;
 	}
@@ -405,19 +366,18 @@ InstructionStatus_t executeDataMovement(Instruction_t instruction) {
 			break;
 	}
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Data Movement instruction executed: OpCode=%d\x1b[0m\n", instruction.opCode);
-	printf("\x1b[36m[DEBUG]: Return status: [%d], Status: [%d]\x1b[0m\n", ret, status);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Data Movement instruction executed: OpCode=%d", instruction.opCode);
+	loggerLogHardware(LOG_INFO, logBuffer);
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Return status: [%d], Status: [%d]", ret, status);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	if (ret != MEM_SUCCESS || status == INSTR_EXEC_FAIL) {
 		raiseInterrupt(IC_INVALID_ADDR);
 		return INSTR_EXEC_FAIL;
 	}
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Data Movement executed. AC=%08d\x1b[0m\n", CPU.AC);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Data Movement executed. AC=%08d", CPU.AC);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	return INSTR_EXEC_SUCCESS;
 }
@@ -432,9 +392,8 @@ InstructionStatus_t executeBranching(Instruction_t instruction) {
 	word stackValue = 0;
 	MemoryStatus_t ret = readMemory(CPU.SP, &stackValue);
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Branching instruction executed: stackValue=%d\x1b[0m\n", stackValue);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Branching instruction executed: stackValue=%d", stackValue);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	if (ret != MEM_SUCCESS) {
 		raiseInterrupt(IC_INVALID_ADDR);
@@ -465,9 +424,8 @@ InstructionStatus_t executeBranching(Instruction_t instruction) {
 
 	if (shouldJump) {
 		CPU.PSW.pc = calculateEffectiveAddress(instruction);
-		#ifdef DEBUG
-		printf("\x1b[36m[DEBUG]: Branch taken to address %03d\x1b[0m\n", CPU.PSW.pc);
-		#endif
+		snprintf(logBuffer, LOG_BUFFER_SIZE, "Branch taken to address %03d", CPU.PSW.pc);
+		loggerLogHardware(LOG_INFO, logBuffer);
 	}
 
 	return INSTR_EXEC_SUCCESS;
@@ -635,9 +593,8 @@ InstructionStatus_t executeReturn(void) {
 CPUStatus_t fetch(void) {
 	CPU.MAR = CPU.PSW.pc;
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Fetching instruction from address %03d\x1b[0m\n", CPU.MAR);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Fetching instruction from address %03d", CPU.MAR);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	if (readMemory(CPU.MAR, &CPU.MDR) != MEM_SUCCESS) {
 		loggerLogInterrupt(IC_INVALID_ADDR);
@@ -646,10 +603,10 @@ CPUStatus_t fetch(void) {
 	CPU.IR = CPU.MDR;
 	CPU.PSW.pc += 1;
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Fetched instruction %08d from address %03d\x1b[0m\n", CPU.IR, CPU.MAR);
-	printf("\x1b[36m[DEBUG]: Updated PC to %03d\x1b[0m\n", CPU.PSW.pc);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Fetched instruction %08d from address %03d", CPU.IR, CPU.MAR);
+	loggerLogHardware(LOG_INFO, logBuffer);
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Updated PC to %03d", CPU.PSW.pc);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	return CPU_OK;
 }
@@ -666,6 +623,7 @@ Instruction_t decode(void) {
 
 CPUStatus_t execute(Instruction_t instruction) {
 	InstructionStatus_t status = INSTR_EXEC_SUCCESS;
+	word interval;
 	switch (instruction.opCode) {
 		case OP_SUM:
 		case OP_RES:
@@ -699,12 +657,10 @@ CPUStatus_t execute(Instruction_t instruction) {
 			status = executeInterruptsChange(instruction);
 			return checkStatus(status);
 		case OP_TTI:
-			word interval;
 			if (fetchOperand(instruction, &interval) == INSTR_EXEC_SUCCESS) {
 				CPU.timerLimit = (uint64_t)wordToInt(interval);
-				#ifdef DEBUG
-				printf("[DEBUG]: Timer interval set to %lu cycles\n", CPU.timerLimit);
-				#endif
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "Timer interval set to %lu cycles\n", CPU.timerLimit);
+				loggerLogHardware(LOG_INFO, logBuffer);
 				status = INSTR_EXEC_SUCCESS;
 			} else {
 				status = INSTR_EXEC_FAIL;
@@ -751,32 +707,27 @@ CPUStatus_t execute(Instruction_t instruction) {
 
 
 bool cpuStep(void) {
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Starting CPU step at PC:%03d\x1b[0m\n", CPU.PSW.pc);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Starting CPU step at PC:%03d", CPU.PSW.pc);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	if (fetch()) return false;
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Fetched instruction %08d into IR\x1b[0m\n", CPU.IR);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Fetched instruction %08d into IR", CPU.IR);
+	loggerLogHardware(LOG_INFO, logBuffer);
 	
 	Instruction_t inst = decode();
 
-	#ifdef DEBUG
-	printf("\x1b[36m[DEBUG]: Decoded instruction - Opcode: %02d, Mode: %01d, Value: %04d\x1b[0m\n", inst.opCode, inst.direction, inst.value);
-	#endif
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Decoded instruction - Opcode: %02d, Mode: %01d, Value: %04d", inst.opCode, inst.direction, inst.value);
+	loggerLogHardware(LOG_INFO, logBuffer);
 
 	if (execute(inst)) {
-		#ifdef DEBUG
-		printf("\x1b[36m[DEBUG]: Fatal error ocurred during execution stage. Executing interruption handler\x1b[0m\n");
-		#endif
+		snprintf(logBuffer, LOG_BUFFER_SIZE, "Fatal error ocurred during execution stage");
+		loggerLogHardware(LOG_ERROR, logBuffer);
 	} else {
-		#ifdef DEBUG
-		printf("\x1b[36m[DEBUG]: Completed CPU step. PC is now at %03d\x1b[0m\n", CPU.PSW.pc);
-		#endif
+		snprintf(logBuffer, LOG_BUFFER_SIZE, "Completed CPU step. PC is now at %03d", CPU.PSW.pc);
+		loggerLogHardware(LOG_INFO, logBuffer);
 	}
-  
+
 	CPU.cyclesCounter++;
 	if ((CPU.cyclesCounter >= CPU.timerLimit) && (CPU.timerLimit > 0)) {
 		CPU.cyclesCounter = 0;

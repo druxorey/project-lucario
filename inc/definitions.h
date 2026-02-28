@@ -5,7 +5,7 @@
  * Contains all shared data structures between the CPU, Memory, DMA,
  * and other subsystems, based on the 8-digit decimal architecture.
  *
- * @version 1.3
+ * @version 1.4
  */
 
 #ifndef DEFINITIONS_H
@@ -25,6 +25,7 @@
 #define DEFAULT_STACK_SIZE 100      /** Default stack size for user programs. */
 #define MIN_STACK_SIZE     50       /** Minimum stack size for user programs. */
 #define LOG_BUFFER_SIZE    512      /** Log buffer size for debug output. */
+#define MAX_PROCESSES      20       /** Maximum number of concurrent processes supported by the OS. */
 
 typedef int32_t word;               /** Represents an 8-decimal digit machine word. (SMMMMMMM S=Sign, M=Magnitude). */
 typedef int32_t address;            /** Represents a memory address (index 0-1999). */
@@ -191,5 +192,6 @@ extern DMA_t DMA;                                                 /**< @brief Gl
 extern Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];  /**< @brief Virtual Hard Disk. */
 extern pthread_mutex_t BUS_LOCK;                                  /**< @brief Mutex for Memory Bus Arbitration. */
 extern pthread_cond_t DMA_COND;                                   /**< @brief Condition variable to synchronize DMA start. */
+extern bool OS_MONITOR_ACTIVE;                                    /**< @brief Flag to indicate if the OS Monitor is active. */
 
 #endif // DEFINITIONS_H
