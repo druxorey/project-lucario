@@ -5,6 +5,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <dirent.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include "../inc/definitions.h"
 #include "../inc/console.h"
@@ -13,6 +15,10 @@
 #include "../inc/kernel/loader.h"
 
 static char logBuffer[LOG_BUFFER_SIZE];
+static char monitorHistory[MAX_HISTORY_LINES][MAX_LINE_LENGTH];
+static int historyCount = 0;
+static struct termios origTermios;
+bool OS_MONITOR_ACTIVE;
 
 static char* trimWhitespace(char* string) {
 	char* source = string;
@@ -170,6 +176,23 @@ static CommandStatus_t printFilesList(void) {
 }
 
 
+static CommandStatus_t enableRawMode(void) {
+	if (tcgetattr(STDIN_FILENO, &origTermios) == -1) return CMD_RUNTIME_ERROR;
+	
+	struct termios raw = origTermios;
+	// We shutdown ECHO (don't print letters alone) and ICANON (read letter by letter without Enter)
+	raw.c_lflag &= ~(ECHO | ICANON);
+	
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) return CMD_RUNTIME_ERROR;
+	return CMD_SUCCESS;
+}
+
+static CommandStatus_t disableRawMode(void) {
+	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &origTermios) == -1) return CMD_RUNTIME_ERROR;
+	return CMD_SUCCESS;
+}
+
+
 CommandStatus_t parseInput(char* input, char* command, char** args, int* argCount) {
 	command[0] = '\0';
 	*argCount = 0;
@@ -198,6 +221,86 @@ CommandStatus_t parseInput(char* input, char* command, char** args, int* argCoun
 		printf("\x1b[36m[DEBUG]: Arg[%d]: [%s]\x1b[0m\n", i, args[i]);
 	}
 	#endif
+
+	return CMD_SUCCESS;
+}
+
+
+CommandStatus_t monitorPrint(const char* message) {
+    if (historyCount < MAX_HISTORY_LINES) {
+        strncpy(monitorHistory[historyCount], message, MAX_LINE_LENGTH - 1);
+        monitorHistory[historyCount][MAX_LINE_LENGTH - 1] = '\0';
+        historyCount++;
+    } else {
+        for (int i = 1; i < MAX_HISTORY_LINES; i++) strcpy(monitorHistory[i - 1], monitorHistory[i]);
+        strncpy(monitorHistory[MAX_HISTORY_LINES - 1], message, MAX_LINE_LENGTH - 1);
+        monitorHistory[MAX_HISTORY_LINES - 1][MAX_LINE_LENGTH - 1] = '\0';
+    }
+
+    snprintf(logBuffer, LOG_BUFFER_SIZE, "Message sent to monitor: %s", message);
+    loggerLogKernel(LOG_INFO, logBuffer);
+
+    if (OS_MONITOR_ACTIVE) {
+        printf("\r\x1b[2K%s\r\n", message);
+        fflush(stdout);
+    }
+
+    return CMD_SUCCESS;
+}
+
+
+CommandStatus_t startMonitorSession(void) {
+	OS_MONITOR_ACTIVE = true;
+
+	printf("\x1b[s\x1b[?1049h"); // ANSI Sequence to switch to alternate screen and save cursor position
+	printf("\x1b[2J\x1b[H"); // Clear screen and move cursor to top-left
+	
+	printf("\x1b[36m--- MONITOR MODE (Press ESC to return to console) ---\x1b[0m\n\n");
+
+	for (int i = 0; i < historyCount; i++) printf("%s\n", monitorHistory[i]);
+
+	if (enableRawMode() != CMD_SUCCESS) {
+		OS_MONITOR_ACTIVE = false;
+		printf("\x1b[?1049l\x1b[u");
+		return CMD_RUNTIME_ERROR;
+	}
+
+	char inputBuffer[MAX_LINE_LENGTH];
+	int inputPos = 0;
+
+	while (true) {
+		char c = getchar();
+		if (c == 27) break; // ESC key to exit monitor
+		else if (c == '\n' || c == '\r') {
+			inputBuffer[inputPos] = '\0';
+			
+			char formattedMsg[MAX_LINE_LENGTH];
+			snprintf(formattedMsg, sizeof(formattedMsg), "> [User]: %s", inputBuffer);
+			
+			printf("\r\n");
+			monitorPrint(formattedMsg);
+			
+			inputPos = 0;
+		}
+		else if (c == 127 || c == 8) {
+			if (inputPos > 0) {
+				inputPos--;
+				printf("\b \b");
+				fflush(stdout);
+			}
+		}
+		else if (isprint(c) && inputPos < (MAX_LINE_LENGTH - 1)) {
+			inputBuffer[inputPos++] = c;
+			putchar(c);
+			fflush(stdout);
+		}
+	}
+
+	disableRawMode();
+	OS_MONITOR_ACTIVE = false;
+
+	printf("\x1b[?1049l\x1b[u"); // ANSI Sequence to switch back to main screen and restore cursor position
+	fflush(stdout);
 
 	return CMD_SUCCESS;
 }
@@ -374,6 +477,13 @@ ConsoleStatus_t consoleStart(void) {
 			} else {
 				output = handleHelpCommand(argCount == 1 ? argument[0] : NULL);
 			}
+		} else if (strcmp(command, "monitor") == 0) {
+			output = startMonitorSession();
+		} else if (strcmp(command, "testprint") == 0) { // Debug command to test monitor output without running a program
+			char msg[256];
+			snprintf(msg, sizeof(msg), "[PID 99] Prueba de salida asincrona numero %d", rand() % 100 + 1);
+			output = monitorPrint(msg);
+			printf("\x1b[32mMensaje enviado al monitor en segundo plano.\x1b[0m\n");
 		} else {
 			printf("\x1b[1;31mUnknown command:\x1b[0m %s\n", command);
 			snprintf(logBuffer, LOG_BUFFER_SIZE, "Unknown command received: %s", command);

@@ -192,5 +192,6 @@ extern DMA_t DMA;                                                 /**< @brief Gl
 extern Sector_t DISK[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];  /**< @brief Virtual Hard Disk. */
 extern pthread_mutex_t BUS_LOCK;                                  /**< @brief Mutex for Memory Bus Arbitration. */
 extern pthread_cond_t DMA_COND;                                   /**< @brief Condition variable to synchronize DMA start. */
+extern bool OS_MONITOR_ACTIVE;                                    /**< @brief Flag to indicate if the OS Monitor is active. */
 
 #endif // DEFINITIONS_H

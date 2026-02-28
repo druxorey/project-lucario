@@ -15,6 +15,8 @@
 #include "../inc/definitions.h"
 
 #define CONSOLE_BUFFER_SIZE 512 /** @brief Maximum character length for a console input line. */
+#define MAX_HISTORY_LINES   100
+#define MAX_LINE_LENGTH     256
 
 /**
  * @brief Command Execution Status Codes.
@@ -53,6 +55,18 @@ typedef enum {
  * @return CommandStatus_t CMD_SUCCESS if parsed, CMD_EMPTY if input was blank.
  */
 CommandStatus_t parseInput(char* input, char* command, char** args, int* argCount);
+
+/**
+ * @brief Prints a message to the monitor and saves it to the history.
+ * @param message The string to save/print.
+ */
+CommandStatus_t monitorPrint(const char* message);
+
+/**
+ * @brief Starts the interactive monitor session in Raw Mode.
+ * Blocks the console thread until the user presses ESC.
+ */
+CommandStatus_t startMonitorSession(void);
 
 /**
  * @brief Handles the program loading logic.
