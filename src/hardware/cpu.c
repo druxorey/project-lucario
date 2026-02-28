@@ -259,10 +259,10 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 			break;
 		case OP_MULT:
 			result = (int64_t)accumulatorValue * operandIntValue;
+			CPU.AC = intToWord(result % (MAX_MAGNITUDE + 1), &CPU.PSW);
 			if (result > MAX_MAGNITUDE || result < -MAX_MAGNITUDE) {
 				CPU.PSW.conditionCode = CC_OVERFLOW;
 			}
-			CPU.AC = intToWord(result % (MAX_MAGNITUDE + 1), &CPU.PSW);
 			break;
 		case OP_DIVI:
 			if (operandIntValue == 0) {
@@ -547,15 +547,15 @@ InstructionStatus_t executeStackManipulation(Instruction_t instruction) {
 			raiseInterrupt(IC_INVALID_ADDR);
 			return INSTR_EXEC_FAIL;
 		}
-		ret = writeMemory(CPU.SP, CPU.AC);
 		CPU.SP -= 1;
+		ret = writeMemory(CPU.SP, CPU.AC);
 	} else if (instruction.opCode == OP_POP) {
 		if (CPU.SP + CPU.RB >= CPU.RL) {
 			raiseInterrupt(IC_INVALID_ADDR);
 			return INSTR_EXEC_FAIL;
 		}
-		CPU.SP += 1;
 		readMemory(CPU.SP, &CPU.AC);
+		CPU.SP += 1;
 		updatePSWFlags();
 	} else {
 		raiseInterrupt(IC_INVALID_INSTR);

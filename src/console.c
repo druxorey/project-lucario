@@ -12,6 +12,7 @@
 #include "../inc/console.h"
 #include "../inc/logger.h"
 #include "../inc/hardware/cpu.h"
+#include "../inc/hardware/memory.h"
 #include "../inc/kernel/loader.h"
 
 static char logBuffer[LOG_BUFFER_SIZE];
@@ -113,7 +114,7 @@ static CommandStatus_t handleHelpCommand(char* argument) {
 		printf("Usage:       list\n");
 		printf("Arguments:   None.\n");
 	} else if (strcmp(argument, "restart") == 0) {
-		printf("Description: Reboots the Lucario System.\n");
+		printf("Description: Restart the system (clears all memory and registers).\n");
 		printf("Usage:       restart\n");
 		printf("Arguments:   None.\n");
 	} else if (strcmp(argument, "shutdown") == 0) {
@@ -404,6 +405,13 @@ CommandStatus_t handleDebugCommand(char* argument) {
 }
 
 
+CommandStatus_t handleRestartCommand(void) {
+	cpuReset();
+	memoryReset();
+	loggerLogKernel(LOG_INFO, "System restarted via CLI (restart command).\n");
+	return CMD_SUCCESS;
+}
+
 ConsoleStatus_t consoleStart(void) {
 	char buffer[CONSOLE_BUFFER_SIZE];
 	char command[CONSOLE_BUFFER_SIZE];
@@ -470,6 +478,13 @@ ConsoleStatus_t consoleStart(void) {
 				loggerLogKernel(LOG_WARNING, "Too many arguments for 'commands' command");
 			} else {
 				output = printCommandList();
+			}
+    } else if (strcmp(command, "restart") == 0) {
+			if (argCount > 0) {
+				printf("\x1b[1;31mError: The 'restart' command does not accept arguments\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'commands' command");
+			} else {
+				output = handleRestartCommand();
 			}
 		} else if (strcmp(command, "help") == 0) {
 			if (argCount > 1) {
