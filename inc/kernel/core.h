@@ -37,7 +37,7 @@ typedef enum {
     OS_ERR_MAX_PROCESSES   = 1, /**< Cannot create process: Process table is full. */
     OS_ERR_MEMORY          = 2, /**< Cannot create process: Insufficient contiguous RAM blocks. */
     OS_ERR_DISK            = 3, /**< Cannot create process: File not found or disk error. */
-    OS_ERR_THREAD_CREATION = 4  /**< Failed to create the background OS thread. */
+    OS_ERR_THREAD          = 4  /**< Failed to create the background OS thread. */
 } OSStatus_t;
 
 /**
@@ -55,21 +55,6 @@ typedef struct {
     int blockCount;             /**< Number of contiguous RAM blocks assigned. */
     int sleepTics;              /**< Remaining CPU cycles to sleep (used by SVC 4). */
 } PCB_t;
-
-/** * @brief The System Process Table.
- * Array containing the PCBs for all processes (active or finished). 
- */
-extern PCB_t ProcessTable[MAX_PROCESSES];
-
-/** * @brief Index of the process currently executing in the CPU.
- * A value of -1 indicates the CPU is idle.
- */
-extern int currentActiveProcess;
-
-/** * @brief Flag to control the lifecycle of the background OS thread.
- * Setting this to false will gracefully stop the kernel loop.
- */
-extern bool osRunning;
 
 /**
  * @brief Initializes the core components of the Operating System.
@@ -97,7 +82,7 @@ OSStatus_t osStart(void);
  * Flags `os_running` as false and waits for the background thread to join,
  * ensuring a safe and clean shutdown of the kernel.
  */
-void osStop(void);
+OSStatus_t osStop(void);
 
 /**
  * @brief Finds the first available index in the Process Table.
@@ -120,5 +105,9 @@ int getFreePCBIndex(void);
  * @return OSStatus_t OS_SUCCESS or an error code if resources are unavailable.
  */
 OSStatus_t createProcess(char* progName);
+
+extern PCB_t ProcessTable[MAX_PROCESSES]; /**< @brief The System Process Table. */
+extern int currentActiveProcess;          /**< @brief Index of the process currently executing in the CPU. */
+extern bool osRunning;                    /**< @brief Flag to control the lifecycle of the background OS thread. */
 
 #endif /* CORE_H */

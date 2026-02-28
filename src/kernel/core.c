@@ -8,11 +8,12 @@
 
 bool osRunning = false;
 pthread_t cpuThread;
-
+PCB_t ProcessTable[MAX_PROCESSES];
+int currentActiveProcess = -1;
 
 void* cpuThreadWorker(void* arg) {
 	(void)arg;
-	loggerLogKernel(LOG_INFO, "CPU Background Thread started.");
+	loggerLogKernel(LOG_INFO, "CPU Background Thread started");
 
 	while (osRunning) {
 		// Here we will check if there are READY processes before calling cpuStep()
@@ -27,7 +28,7 @@ void* cpuThreadWorker(void* arg) {
 		usleep(100000); // Temporal to keep the thread alive and sleeping to avoid burning the real CPU.
 	}
 
-	loggerLogKernel(LOG_INFO, "CPU Background Thread stopped.");
+	loggerLogKernel(LOG_INFO, "CPU Background Thread stopped");
 	return NULL;
 }
 
@@ -35,14 +36,41 @@ void* cpuThreadWorker(void* arg) {
 OSStatus_t osStart(void) {
 	osRunning = true;
 	if (pthread_create(&cpuThread, NULL, cpuThreadWorker, NULL) != 0) {
-		loggerLogKernel(LOG_ERROR, "Failed to create CPU thread.");
-		return OS_ERR_THREAD_CREATION;
+		loggerLogKernel(LOG_ERROR, "Failed to create CPU thread");
+		return OS_ERR_THREAD;
 	}
 	return OS_SUCCESS;
 }
 
 
-void osStop(void) {
+OSStatus_t osStop(void) {
 	osRunning = false;
-	pthread_join(cpuThread, NULL);
+	if (pthread_join(cpuThread, NULL) != 0) {
+		loggerLogKernel(LOG_ERROR, "Failed to join CPU thread");
+		return OS_ERR_THREAD;
+	}
+	return OS_SUCCESS;
+}
+
+
+OSStatus_t initOS(void) {
+	for (int i = 0; i < MAX_PROCESSES; i++) {
+		ProcessTable[i].state = FINISHED;
+		ProcessTable[i].pid = -1;
+	}
+	
+	currentActiveProcess = -1;
+	
+	loggerLogKernel(LOG_INFO, "OS initialized: Process Table completely flushed and ready");
+	return OS_SUCCESS;
+}
+
+
+int getFreePCBIndex(void) {
+	for (int i = 0; i < MAX_PROCESSES; i++) {
+		if (ProcessTable[i].state == FINISHED) return i;
+	}
+	
+	loggerLogKernel(LOG_WARNING, "Process limit reached. No free PCB available");
+	return -1;
 }

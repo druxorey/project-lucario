@@ -15,10 +15,15 @@ int main() {
 	memoryInit();
 
 	pthread_t dmaThread;
-    pthread_create(&dmaThread, NULL, &dmaInit, NULL);
+	pthread_create(&dmaThread, NULL, &dmaInit, NULL);
 	pthread_detach(dmaThread);
-	
+
 	loggerLogHardware(LOG_INFO, "System Boot sequence initiated");
+
+	if (initOS() != OS_SUCCESS) {
+		printf("\x1b[1;31mCRITICAL ERROR: Could not initialize OS structures.\x1b[0m\n");
+		return 1;
+	}
 
 	if (osStart() != OS_SUCCESS) {
 		printf("\x1b[1;31mCRITICAL ERROR: Could not start OS Kernel.\x1b[0m\n");
