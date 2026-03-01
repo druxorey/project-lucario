@@ -15,6 +15,8 @@
 #include "../inc/definitions.h"
 
 #define CONSOLE_BUFFER_SIZE 512 /** @brief Maximum character length for a console input line. */
+#define MAX_HISTORY_LINES   100
+#define MAX_LINE_LENGTH     256
 
 /**
  * @brief Command Execution Status Codes.
@@ -27,7 +29,8 @@ typedef enum {
 	CMD_UNKNOWN       = 2,  /**< The entered command is not recognized. */
 	CMD_MISSING_ARGS  = 3,  /**< Command exists (e.g., RUN) but required argument is missing. */
 	CMD_LOAD_ERROR    = 4,  /**< Loader failed to open or parse the specified file. */
-	CMD_RUNTIME_ERROR = 5   /**< Generic error during execution (CPU/Memory fault). */
+	CMD_RUNTIME_ERROR = 5,  /**< Generic error during execution (CPU/Memory fault). */
+	CMD_TOO_MANY_ARGS = 6   /**< Command has more arguments than expected (e.g., "debug file.txt extra.txt"). */
 } CommandStatus_t;
 
 /**
@@ -42,15 +45,28 @@ typedef enum {
 /**
  * @brief Parses and tokenizes the raw user input.
  *
- * Cleans the input string (trims whitespace) and splits it into the command
- * and its argument.
+ * Cleans the input string and splits it into the command and a list
+ * of arguments.
  *
  * @param input The raw input buffer from stdin (modified in place).
- * @param command Buffer to store the extracted command (e.g., "RUN").
- * @param argument Buffer to store the extracted argument (e.g., "file.txt").
+ * @param command Buffer to store the extracted command (e.g., "run").
+ * @param args Array of pointers to store the extracted arguments.
+ * @param argCount Pointer to an integer to store the total number of arguments.
  * @return CommandStatus_t CMD_SUCCESS if parsed, CMD_EMPTY if input was blank.
  */
-CommandStatus_t parseInput(char* input, char* command, char* argument);
+CommandStatus_t parseInput(char* input, char* command, char** args, int* argCount);
+
+/**
+ * @brief Prints a message to the monitor and saves it to the history.
+ * @param message The string to save/print.
+ */
+CommandStatus_t monitorPrint(const char* message);
+
+/**
+ * @brief Starts the interactive monitor session in Raw Mode.
+ * Blocks the console thread until the user presses ESC.
+ */
+CommandStatus_t startMonitorSession(void);
 
 /**
  * @brief Handles the program loading logic.
@@ -72,7 +88,7 @@ CommandStatus_t handleLoadCommand(char* argument);
  * @param argument The filename string provided by the user.
  * @return CommandStatus_t CMD_SUCCESS if execution finished normally, or CMD_RUNTIME_ERROR.
  */
-CommandStatus_t handleRunCommand(char* argument);
+CommandStatus_t handleRunCommand(char** args, int argCount);
 
 /**
  * @brief Handles the 'DEBUG' command logic.
