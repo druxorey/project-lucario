@@ -6,55 +6,13 @@
  * and the main functions to initialize, start, and manage the operating
  * system's lifecycle and background execution thread.
  *
- * @version 1.0
+ * @version 1.1
  */
 
 #ifndef CORE_H
 #define CORE_H
 
-#include "../hardware/cpu.h"
-
-/**
- * @brief Represents the possible lifecycle states of a process in the OS.
- */
-typedef enum {
-    NEW,                /**< Process is being created and loaded into memory. */
-    READY,              /**< Process is in the queue, waiting for CPU time. */
-    EXECUTING,          /**< Process is currently running on the CPU. */
-    BLOCKED,            /**< Process is sleeping (SVC 4) or waiting for an event. */
-    BLOCKED_IO,         /**< Process is waiting for the user to open the monitor for I/O. */
-    FINISHED            /**< Process has terminated or was aborted due to an error. */
-} ProcessState;
-
-/**
- * @brief Operating System Status Codes.
- *
- * Used to indicate the result of kernel-level operations such as
- * process creation, thread initialization, and resource allocation.
- */
-typedef enum {
-    OS_SUCCESS             = 0, /**< Operation completed successfully. */
-    OS_ERR_MAX_PROCESSES   = 1, /**< Cannot create process: Process table is full. */
-    OS_ERR_MEMORY          = 2, /**< Cannot create process: Insufficient contiguous RAM blocks. */
-    OS_ERR_DISK            = 3, /**< Cannot create process: File not found or disk error. */
-    OS_ERR_THREAD          = 4  /**< Failed to create the background OS thread. */
-} OSStatus_t;
-
-/**
- * @brief Process Control Block (PCB).
- *
- * Data structure used by the OS to store all the information about a process.
- * It holds the CPU context, memory boundaries, and scheduling metadata.
- */
-typedef struct {
-    int pid;                    /**< Process ID (Unique identifier). */
-    ProcessState state;         /**< Current state of the process. */
-    CPU_t context;              /**< Snapshot of the CPU registers (PC, AC, SP, etc.). */
-    char programName[256];      /**< Name of the executable file (e.g., "calc.txt"). */
-    int startBlock;             /**< Starting RAM block index assigned to this process. */
-    int blockCount;             /**< Number of contiguous RAM blocks assigned. */
-    int sleepTics;              /**< Remaining CPU cycles to sleep (used by SVC 4). */
-} PCB_t;
+#include "../definitions.h"
 
 /**
  * @brief Initializes the core components of the Operating System.
