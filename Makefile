@@ -10,7 +10,7 @@ vpath %.c $(SRC_DIRS)
 TARGET = $(BIN_DIR)/project_lucario
 
 CC = gcc
-CFLAGS = -Wall -Wextra -pthread -lm -g -I$(INC_DIR)
+CFLAGS = -Wall -Wextra -pthread -g -I$(INC_DIR)
 
 SRCS = $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))

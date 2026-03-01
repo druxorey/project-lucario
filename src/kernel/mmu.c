@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <string.h>
-#include <math.h>
 
 #include "../../inc/kernel/mmu.h"
 
@@ -16,7 +15,7 @@ void mmuInit(void) {
 int calculateRequiredBlocks(int wordCount) {
 	int total = wordCount + MIN_STACK_SIZE;
 	if (total <= MIN_STACK_SIZE || total > (PARTITION_SIZE * MAX_PROCESSES)) return 0;
-	int blocks = ceil(total / (double)PARTITION_SIZE);
+	int blocks = (total + PARTITION_SIZE - 1) / PARTITION_SIZE;
 	return blocks;
 }
 
