@@ -24,7 +24,8 @@ DEPS_loader      = $(OBJ_DIR)/loader.o $(OBJ_DIR)/logger.o
 DEPS_logger      = $(OBJ_DIR)/logger.o
 DEPS_memory      = $(OBJ_DIR)/memory.o $(OBJ_DIR)/logger.o
 DEPS_dma         = $(OBJ_DIR)/dma.o $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
-ALL_MODULES = console cpu operations definitions disk loader logger memory dma
+DEPS_mmu         = $(OBJ_DIR)/mmu.o
+ALL_MODULES = console cpu operations definitions disk loader logger memory dma mmu
 
 all: $(TARGET)
 	@echo -e "\e[1;32m[SUCCESS]\e[0m Compiled in normal mode"
