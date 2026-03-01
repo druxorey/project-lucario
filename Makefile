@@ -10,7 +10,7 @@ vpath %.c $(SRC_DIRS)
 TARGET = $(BIN_DIR)/project_lucario
 
 CC = gcc
-CFLAGS = -Wall -Wextra -pthread -g -I$(INC_DIR)
+CFLAGS = -Wall -Wextra -pthread -lm -g -I$(INC_DIR)
 
 SRCS = $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))
@@ -24,7 +24,8 @@ DEPS_loader      = $(OBJ_DIR)/loader.o $(OBJ_DIR)/logger.o
 DEPS_logger      = $(OBJ_DIR)/logger.o
 DEPS_memory      = $(OBJ_DIR)/memory.o $(OBJ_DIR)/logger.o
 DEPS_dma         = $(OBJ_DIR)/dma.o $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
-ALL_MODULES = console cpu operations definitions disk loader logger memory dma
+DEPS_mmu         = $(OBJ_DIR)/mmu.o
+ALL_MODULES = console cpu operations definitions disk loader logger memory dma mmu
 
 all: $(TARGET)
 	@echo -e "\e[1;32m[SUCCESS]\e[0m Compiled in normal mode"
