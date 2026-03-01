@@ -2,7 +2,7 @@
  * @file: mmu.h
  * @brief: Memory Management Unit (MMU) definitions and function prototypes.
  * 
- * Summary
+ * This header defines the interface for the MMU subsystem, including functions for initializing the MMU, calculating required memory blocks, allocating and freeing memory, and macros for calculating base and limit register values.
  * 
  * @version 1.0
  */
