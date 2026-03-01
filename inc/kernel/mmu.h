@@ -2,7 +2,9 @@
  * @file: mmu.h
  * @brief: Memory Management Unit (MMU) definitions and function prototypes.
  * 
- * This header defines the interface for the MMU subsystem, including functions for initializing the MMU, calculating required memory blocks, allocating and freeing memory, and macros for calculating base and limit register values.
+ * This header defines the interface for the MMU subsystem, including functions 
+ * for initializing the MMU, calculating required memory blocks, allocating and 
+ * freeing memory, and macros for calculating base and limit register values.
  * 
  * @version 1.0
  */
@@ -17,22 +19,29 @@
 
 /** 
  * @brief Initializes the MMU subsystem.
- * Initializes the partition management bitmap. 
+ * 
+ * Initializes all the partition management bitmap entries to indicate they're all free. 
  */
 void mmuInit(void);
 
 /** 
  * @brief Calculates the number of memory blocks required for a given program's word count.
- * Takes into account the minimum stack size and partitions.
  * 
- * @param wordCount the program's number of words.
+ * Calculates the total memory needed by adding the program's word count to the 
+ * minimum stack size, then determines how many partitions (blocks) are required 
+ * to accommodate that total. If the total exceeds the maximum memory available, 
+ * it returns 0.
+ * 
+ * @param wordCount The program's number of words.
  * @return The number of memory blocks (partitions) required to accommodate the request.
  */
 int calculateRequiredBlocks(int wordCount);
 
 /** 
  * @brief Allocates memory blocks for a program.
- * Searches for the required number of contiguous free blocks in the partition bitmap and marks them as occupied.
+ * 
+ * Searches for the first range of required number of contiguous free blocks in 
+ * the partition bitmap and marks them as occupied. 
  * 
  * @param requiredBlocks The number of contiguous blocks needed for the program.
  * @return The index of the first allocated block, or -1 if allocation fails.
@@ -41,6 +50,7 @@ int allocateMemory(int requiredBlocks);
 
 /** 
  * @brief Frees previously allocated memory blocks.
+ * 
  * Marks the specified blocks as free in the partition bitmap.
  * 
  * @param startBlock The index of the first block to free.
@@ -50,7 +60,7 @@ int allocateMemory(int requiredBlocks);
  */
 /*TEMPORARILY int*/ int freeMemory(int startBlock, int blockCount);
 
-#define GET_BASE_REGISTER(startBlockIndex) (OS_RESERVED_SIZE + (startBlockIndex * PARTITION_SIZE))      /**< @brief Calculates the base register value for a given block index. */
-#define GET_LIMIT_REGISTER(rb, endBlockIndex) (rb + (endBlockIndex * PARTITION_SIZE) - 1)               /**< @brief Returns the limit register value for a given block index. */
+#define GET_BASE_REGISTER(startBlock) (OS_RESERVED_SIZE + (startBlock * PARTITION_SIZE))      /**< @brief Calculates the base register value for a given block index. */
+#define GET_LIMIT_REGISTER(rb, blockCount) (rb + (blockCount * PARTITION_SIZE) - 1)               /**< @brief Returns the limit register value for a given block index. */
 
 #endif // MMU_H
