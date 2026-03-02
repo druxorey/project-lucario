@@ -121,7 +121,6 @@ VFSStatus_t vfsLoadToDisk(const char* filePath) {
 }
 
 
-// --- Legacy Loader Functions ---
 word readProgramWord(FILE* filePtr) {
 	char line[512];
 	word w = 0;
