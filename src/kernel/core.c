@@ -3,13 +3,14 @@
 #include <unistd.h>
 
 #include "../../inc/logger.h"
-#include "../../inc/hardware/cpu.h"
 #include "../../inc/kernel/core.h"
+#include "../../inc/kernel/mmu.h"
 
+PCB_t PROCESS_TABLE[MAX_PROCESSES];
+
+int currentActiveProcess = -1;
 bool osRunning = false;
 pthread_t cpuThread;
-PCB_t ProcessTable[MAX_PROCESSES];
-int currentActiveProcess = -1;
 
 void* cpuThreadWorker(void* arg) {
 	(void)arg;
@@ -54,9 +55,11 @@ OSStatus_t osStop(void) {
 
 
 OSStatus_t initOS(void) {
+	mmuInit();
+
 	for (int i = 0; i < MAX_PROCESSES; i++) {
-		ProcessTable[i].state = FINISHED;
-		ProcessTable[i].pid = -1;
+		PROCESS_TABLE[i].state = FINISHED;
+		PROCESS_TABLE[i].pid = -1;
 	}
 	
 	currentActiveProcess = -1;
@@ -68,7 +71,7 @@ OSStatus_t initOS(void) {
 
 int getFreePCBIndex(void) {
 	for (int i = 0; i < MAX_PROCESSES; i++) {
-		if (ProcessTable[i].state == FINISHED) return i;
+		if (PROCESS_TABLE[i].state == FINISHED) return i;
 	}
 	
 	loggerLogKernel(LOG_WARNING, "Process limit reached. No free PCB available");

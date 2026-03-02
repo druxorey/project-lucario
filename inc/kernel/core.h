@@ -64,8 +64,4 @@ int getFreePCBIndex(void);
  */
 OSStatus_t createProcess(char* progName);
 
-extern PCB_t ProcessTable[MAX_PROCESSES]; /**< @brief The System Process Table. */
-extern int currentActiveProcess;          /**< @brief Index of the process currently executing in the CPU. */
-extern bool osRunning;                    /**< @brief Flag to control the lifecycle of the background OS thread. */
-
 #endif /* CORE_H */

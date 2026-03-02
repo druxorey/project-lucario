@@ -4,11 +4,11 @@
 
 #include "../../inc/kernel/mmu.h"
 
-bool freePartitions[MAX_PROCESSES]; // false = occupied, true = free
+bool FREE_PARTITIONS[MAX_PROCESSES]; // false = occupied, true = free
 
 
 void mmuInit(void) {
-	memset(freePartitions, true, sizeof(freePartitions));
+	memset(FREE_PARTITIONS, true, sizeof(FREE_PARTITIONS));
 }
 
 
@@ -25,12 +25,12 @@ int allocateMemory(int requiredBlocks) {
 
 	int contiguousCount = 0;
 	for (int i = 0; i < MAX_PROCESSES; i++) {
-		if (freePartitions[i]) {
+		if (FREE_PARTITIONS[i]) {
 			contiguousCount++;
 			if (contiguousCount == requiredBlocks) {
 				int startIndex = i - requiredBlocks + 1;
 				for (int j = startIndex; j <= i; j++) {
-					freePartitions[j] = false;
+					FREE_PARTITIONS[j] = false;
 				}
 				return startIndex;
 			}
@@ -47,7 +47,7 @@ OSStatus_t freeMemory(int startBlock, int blockCount) {
 		return OS_ERR_MEMORY;
 	}
 	for (int i = startBlock; i < startBlock + blockCount; i++) {
-		freePartitions[i] = true;
+		FREE_PARTITIONS[i] = true;
 	}
 	return OS_SUCCESS;
 }
