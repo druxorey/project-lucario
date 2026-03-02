@@ -22,9 +22,13 @@ UTEST(Logger, LogFileCreation) {
 	loggerInit();
 	loggerClose();
 
-	FILE *f = fopen("logs.txt", "r");
-	ASSERT_TRUE(f != NULL);
-	if (f) fclose(f);
+	FILE *fh = fopen("logs_hardware.txt", "r");
+	ASSERT_TRUE(fh != NULL);
+	if (fh) fclose(fh);
+
+	FILE *fk = fopen("logs_kernel.txt", "r");
+	ASSERT_TRUE(fk != NULL);
+	if (fk) fclose(fk);
 }
 
 // Verify that log entries are correctly written to the log file
@@ -33,7 +37,7 @@ UTEST(Logger, LogFileUpdate) {
 	loggerLogHardware(LOG_ERROR, "Writing test log entry");
 	loggerClose();
 	
-	FILE *f = fopen("logs.txt", "r");
+	FILE *f = fopen("logs_hardware.txt", "r");
 	ASSERT_TRUE(f != NULL);
 	
 	char buffer[100];
@@ -56,7 +60,7 @@ UTEST(Logger, InterruptLogFormat) {
 	loggerLogInterrupt(IC_OVERFLOW);
 	loggerClose();
 	
-	FILE *f = fopen("logs.txt", "r");
+	FILE *f = fopen("logs_hardware.txt", "r");
 	ASSERT_TRUE(f != NULL);
 
 	char buffer[256];
@@ -88,7 +92,7 @@ UTEST(Logger, ThreadSafety) {
 
 	loggerClose();
  
-	FILE *f = fopen("logs.txt", "r");
+	FILE *f = fopen("logs_hardware.txt", "r");
 	int lines = 0;
 	char c;
 	while(!feof(f)) {
@@ -101,6 +105,3 @@ UTEST(Logger, ThreadSafety) {
 	// But if 50 lines are missing, your logger is useless for the project.
 	ASSERT_TRUE(lines >= 200);
 }
-
-// TODO: Verify compliance with the specified log format for CPU cycles
-//UTEST(Logger, DebugFormatCompliance);

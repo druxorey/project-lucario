@@ -7,6 +7,7 @@
 #include "../../inc/logger.h"
 #include "../../inc/hardware/cpu.h"
 #include "../../inc/hardware/memory.h"
+#include "../../inc/kernel/scheduler.h"
 
 static uint16_t interruptBitmap = 0;
 static int64_t interruptValue = 0;
@@ -153,6 +154,7 @@ bool handleInterrupt(InterruptCode_t code) {
 			loggerLogHardware(LOG_INFO, "Arithmetic Underflow: Value clamped to 0");
 			return true;
 		case IC_TIMER: // Simulate program pause
+			schedulerTick();
 			loggerLogHardware(LOG_INFO, "Timer Interrupt: External clock tick received");
 			return true;
 		case IC_IO_DONE: // Simulate program resume after I/O completion
