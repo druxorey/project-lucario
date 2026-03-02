@@ -2,7 +2,7 @@
 
 #include "../lib/utest.h"
 #include "../inc/hardware/memory.h"
-#include "../inc/kernel/loader.h"
+#include "../inc/kernel/vfs.h"
 
 CPU_t CPU;
 word RAM[RAM_SIZE];

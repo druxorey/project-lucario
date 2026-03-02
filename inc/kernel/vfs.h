@@ -1,15 +1,15 @@
 /**
- * @file loader.h
+ * @file vfs.h
  * @brief Interfaces for loading programs into the Virtual Hardware memory.
  *
  * Declares data structures and functions to read program metadata and words
  * from an input file and store them in the Virtual Hardware memory.
  *
- * @version 1.0
+ * @version 1.1
  */
 
-#ifndef LOADER_H
-#define LOADER_H
+#ifndef VFS_H
+#define VFS_H
 
 #include <stdio.h>
 #include "../../inc/definitions.h"

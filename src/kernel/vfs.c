@@ -4,7 +4,7 @@
 
 #include "../../inc/logger.h"
 #include "../../inc/hardware/memory.h"
-#include "../../inc/kernel/loader.h"
+#include "../../inc/kernel/vfs.h"
 
 word readProgramWord(FILE* filePtr) {
 	char line[512];

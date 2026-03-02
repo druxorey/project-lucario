@@ -13,7 +13,7 @@
 #include "../inc/logger.h"
 #include "../inc/hardware/cpu.h"
 #include "../inc/hardware/memory.h"
-#include "../inc/kernel/loader.h"
+#include "../inc/kernel/vfs.h"
 #include "../inc/kernel/mmu.h"
 
 static char logBuffer[LOG_BUFFER_SIZE];

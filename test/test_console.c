@@ -3,7 +3,7 @@
 #include "../lib/utest.h"
 #include "../inc/console.h"
 #include "../inc/logger.h"
-#include "../inc/kernel/loader.h"
+#include "../inc/kernel/vfs.h"
 
 static char spyLastFileName[CONSOLE_BUFFER_SIZE];
 static int spyCpuRunCallCount = 0;
@@ -49,12 +49,13 @@ int wordToInt(word w) {
 CommandStatus_t consoleProcessCommand(char* input) {
 	char command[CONSOLE_BUFFER_SIZE];
 	char argument[CONSOLE_BUFFER_SIZE];
+	int arg = 1;
 
-	CommandStatus_t parseStatus = parseInput(input, command, argument);
+	CommandStatus_t parseStatus = parseInput(input, command, argument, &arg);
 	if (parseStatus == CMD_EMPTY) return CMD_EMPTY;
 
 	if (strcmp(command, "EXIT") == 0) return CMD_SUCCESS;
-	if (strcmp(command, "RUN") == 0) return handleRunCommand(argument);
+	if (strcmp(command, "RUN") == 0) return handleRunCommand(argument, 1);
 	if (strcmp(command, "DEBUG") == 0) return handleDebugCommand(argument);
 
 	return CMD_UNKNOWN;
