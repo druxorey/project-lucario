@@ -16,9 +16,7 @@ static uint8_t freeSector = 0;
 
 bool vfsFileExists(const char* fileName) {
 	for (int i = 0; i < catalogCount; i++) {
-		if (strcmp(diskCatalog[i].fileName, fileName) == 0) {
-			return true;
-		}
+		if (strcmp(diskCatalog[i].fileName, fileName) == 0) return true;
 	}
 	return false;
 }
@@ -27,9 +25,7 @@ bool vfsFileExists(const char* fileName) {
 VFSStatus_t vfsGetMetadata(const char* fileName, FileMeta_t* outMeta) {
 	for (int i = 0; i < catalogCount; i++) {
 		if (strcmp(diskCatalog[i].fileName, fileName) == 0) {
-			if (outMeta != NULL) {
-				*outMeta = diskCatalog[i];
-			}
+			if (outMeta != NULL) *outMeta = diskCatalog[i];
 			return VFS_SUCCESS;
 		}
 	}
