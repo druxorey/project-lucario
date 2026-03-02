@@ -14,12 +14,45 @@
 #include "../inc/hardware/cpu.h"
 #include "../inc/hardware/memory.h"
 #include "../inc/kernel/loader.h"
+#include "../inc/kernel/mmu.h"
 
 static char logBuffer[LOG_BUFFER_SIZE];
 static char monitorHistory[MAX_HISTORY_LINES][MAX_LINE_LENGTH];
 static int historyCount = 0;
 static struct termios origTermios;
 bool OS_MONITOR_ACTIVE;
+
+#ifdef DEBUG
+static CommandStatus_t populateMockData(void) {
+	PROCESS_TABLE[0].pid = 1;
+	PROCESS_TABLE[0].state = EXECUTING;
+	strcpy(PROCESS_TABLE[0].programName, "calculadora.txt");
+	PROCESS_TABLE[0].startBlock = 0;
+	PROCESS_TABLE[0].blockCount = 2;
+	FREE_PARTITIONS[0] = false; // Bloque 0 ocupado
+	FREE_PARTITIONS[1] = false; // Bloque 1 ocupado
+
+	PROCESS_TABLE[1].pid = 2;
+	PROCESS_TABLE[1].state = BLOCKED_IO;
+	strcpy(PROCESS_TABLE[1].programName, "juego_adivina.txt");
+	PROCESS_TABLE[1].startBlock = 2;
+	PROCESS_TABLE[1].blockCount = 1;
+	FREE_PARTITIONS[2] = false; // Bloque 2 ocupado
+
+	PROCESS_TABLE[2].pid = 3;
+	PROCESS_TABLE[2].state = READY;
+	strcpy(PROCESS_TABLE[2].programName, "analisis_datos.txt");
+	PROCESS_TABLE[2].startBlock = 3;
+	PROCESS_TABLE[2].blockCount = 3;
+	FREE_PARTITIONS[3] = false;
+	FREE_PARTITIONS[4] = false;
+	FREE_PARTITIONS[5] = false;
+
+	printf("\x1b[32m[DEBUG]: Mock data populated successfully.\x1b[0m\n");
+	return CMD_SUCCESS;
+}
+#endif
+
 
 static char* trimWhitespace(char* string) {
 	char* source = string;
@@ -51,6 +84,19 @@ static char* trimWhitespace(char* string) {
 
 	*destiny = '\0';
 	return string;
+}
+
+
+static const char* stateToString(ProcessState state) {
+	switch(state) {
+		case NEW: return "NEW";
+		case READY: return "READY";
+		case EXECUTING: return "EXECUTING";
+		case BLOCKED: return "BLOCKED";
+		case BLOCKED_IO: return "BLOCKED_IO";
+		case FINISHED: return "FINISHED";
+		default: return "UNKNOWN";
+	}
 }
 
 
@@ -148,6 +194,54 @@ static CommandStatus_t printFilesList(void) {
 }
 
 
+static CommandStatus_t printProcessStatus(void) {
+	printf("\n\x1b[34m------------------- PROCESS STATUS (ps) ------------------\x1b[0m\n\n");
+	printf(" %-4s | %-10s | %-10s | %s\n", "PID", "STATE", "MEMORY (%)", "PROGRAM NAME");
+	printf("----------------------------------------------------------\n");
+	
+	bool activeProcesses = false;
+	
+	for (int i = 0; i < MAX_PROCESSES; i++) {
+		if (PROCESS_TABLE[i].state == FINISHED) continue;
+		activeProcesses = true;
+		int memPercentage = (PROCESS_TABLE[i].blockCount * PARTITION_SIZE * 100) / RAM_SIZE;
+		printf(" %-4d | %-10s | %-10d | %s\n", PROCESS_TABLE[i].pid, stateToString(PROCESS_TABLE[i].state), memPercentage, PROCESS_TABLE[i].programName);
+	}
+	
+	if (!activeProcesses) printf("           No active processes at the moment\n");
+
+	printf("----------------------------------------------------------\n\n");
+	
+	loggerLogKernel(LOG_INFO, "User executed 'ps' command");
+	return CMD_SUCCESS;
+}
+
+
+static CommandStatus_t printMemoryStatus(void) {
+	printf("\n\x1b[34m----- MEMORY STATUS (memstat) -----\x1b[0m\n\n");
+	printf(" BLOCK  | RANGE (RB-RL) |  STATUS\n");
+	printf("-----------------------------------\n");
+	
+	int occupiedBlocks = 0;
+	
+	for (int i = 0; i < MAX_PROCESSES; i++) {
+		int rb = GET_BASE_REGISTER(i);
+		int rl = GET_LIMIT_REGISTER(rb, 1);
+		
+		bool isFree = FREE_PARTITIONS[i];
+		if (!isFree) occupiedBlocks++;
+		
+		printf(" BLK %02d | [%04d - %04d] | %s\n", i, rb, rl, isFree ? "  \x1b[32mFREE\x1b[0m" : "\x1b[31mOCCUPIED\x1b[0m");
+	}
+	
+	printf("-----------------------------------\n");
+	printf("       Total RAM Usage: %d%%\n\n", (occupiedBlocks * 100) / MAX_PROCESSES);
+	
+	loggerLogKernel(LOG_INFO, "User executed 'memstat' command");
+	return CMD_SUCCESS;
+}
+
+
 static CommandStatus_t enableRawMode(void) {
 	if (tcgetattr(STDIN_FILENO, &origTermios) == -1) return CMD_RUNTIME_ERROR;
 	
@@ -158,6 +252,7 @@ static CommandStatus_t enableRawMode(void) {
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) return CMD_RUNTIME_ERROR;
 	return CMD_SUCCESS;
 }
+
 
 static CommandStatus_t disableRawMode(void) {
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &origTermios) == -1) return CMD_RUNTIME_ERROR;
@@ -461,11 +556,29 @@ ConsoleStatus_t consoleStart(void) {
 				continue;
 			}
 			output = startMonitorSession();
+		} else if (strcmp(command, "ps") == 0) {
+			if (argCount > 0) {
+				printf("\x1b[1;31mError: Too many arguments for 'ps' command\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'ps' command");
+				continue;
+			}
+			output = printProcessStatus();
+		} else if (strcmp(command, "memstat") == 0) {
+			if (argCount > 0) {
+				printf("\x1b[1;31mError: Too many arguments for 'memstat' command\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'memstat' command");
+				continue;
+			}
+			output = printMemoryStatus();
+		#ifdef DEBUG
 		} else if (strcmp(command, "testprint") == 0) { // Debug command to test monitor output without running a program
 			char msg[256];
 			snprintf(msg, sizeof(msg), "[PID 99] Prueba de salida asincrona numero %d", rand() % 100 + 1);
 			output = monitorPrint(msg);
 			printf("\x1b[32mMensaje enviado al monitor en segundo plano.\x1b[0m\n");
+		} else if (strcmp(command, "mock") == 0) { // Debug command to populate mock processes and memory state for testing 'ps' and 'memstat' commands
+			output = populateMockData();
+		#endif
 		} else {
 			printf("\x1b[1;31mUnknown command:\x1b[0m %s\n", command);
 			snprintf(logBuffer, LOG_BUFFER_SIZE, "Unknown command received: %s", command);
