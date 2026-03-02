@@ -8,8 +8,8 @@ word mockRAM[RAM_SIZE];
 
 // Auxiliary function to peek into the freePartitions array for testing
 bool isPartitionFree(int index) {
-	extern bool freePartitions[MAX_PROCESSES];
-	return freePartitions[index];
+	extern bool FREE_PARTITIONS[MAX_PROCESSES];
+	return FREE_PARTITIONS[index];
 }
 
 UTEST_MAIN();

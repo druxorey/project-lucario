@@ -138,7 +138,7 @@ MemoryStatus_t dmaReadMemory(address physAddr, word* outData) {
 
     *outData = RAM[physAddr];
 
-	snprintf(logBuffer, LOG_BUFFER_SIZE, "DMA Phys-Read at [%d] = %d\x1b[0m\n", physAddr, *outData);
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "DMA Phys-Read at [%d] = %08d", physAddr, *outData);
 	loggerLogHardware(LOG_INFO, logBuffer);
 
     pthread_mutex_unlock(&BUS_LOCK);
@@ -155,7 +155,7 @@ MemoryStatus_t dmaWriteMemory(address physAddr, word data) {
 
     RAM[physAddr] = data;
 
-	snprintf(logBuffer, LOG_BUFFER_SIZE, "DMA Phys-Write at [%d] = %d\x1b[0m\n", physAddr, data);
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "DMA Phys-Write at [%d] = %08d", physAddr, data);
 	loggerLogHardware(LOG_INFO, logBuffer);
 
     pthread_mutex_unlock(&BUS_LOCK);

@@ -15,7 +15,6 @@ CFLAGS = -Wall -Wextra -pthread -g -I$(INC_DIR)
 SRCS = $(foreach dir, $(SRC_DIRS), $(wildcard $(dir)/*.c))
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))
 
-DEPS_console     = $(OBJ_DIR)/console.o $(OBJ_DIR)/logger.o
 DEPS_cpu         = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
 DEPS_operations  = $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
 DEPS_definitions =
@@ -25,7 +24,7 @@ DEPS_logger      = $(OBJ_DIR)/logger.o
 DEPS_memory      = $(OBJ_DIR)/memory.o $(OBJ_DIR)/logger.o
 DEPS_dma         = $(OBJ_DIR)/dma.o $(OBJ_DIR)/cpu.o $(OBJ_DIR)/logger.o
 DEPS_mmu         = $(OBJ_DIR)/mmu.o
-ALL_MODULES = console cpu operations definitions disk loader logger memory dma mmu
+ALL_MODULES = cpu operations definitions disk vfs logger memory dma mmu
 
 all: $(TARGET)
 	@echo -e "\e[1;32m[SUCCESS]\e[0m Compiled in normal mode"
