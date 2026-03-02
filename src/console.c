@@ -15,6 +15,7 @@
 #include "../inc/hardware/memory.h"
 #include "../inc/kernel/vfs.h"
 #include "../inc/kernel/mmu.h"
+#include "../inc/kernel/core.h"
 
 static char logBuffer[LOG_BUFFER_SIZE];
 static char monitorHistory[MAX_HISTORY_LINES][MAX_LINE_LENGTH];
@@ -405,15 +406,20 @@ CommandStatus_t handleRunCommand(char** args, int argCount) {
 	printf("Loading processes into OS...\n");
 
 	for (int i = 0; i < argCount; i++) {
-		// Here eventually we will call createProcess(args[i]);
-		printf(" -> [QUEUED] Process %s created successfully.\n", args[i]);
+		OSStatus_t status = createProcess(args[i]);
 		
-		snprintf(logBuffer, LOG_BUFFER_SIZE, "Process requested via CLI: %s", args[i]);
-		loggerLogKernel(LOG_INFO, logBuffer);
+		if (status == OS_SUCCESS) {
+			printf(" -> \x1b[32m[QUEUED]\x1b[0m Process '%s' created successfully.\n", args[i]);
+		} else if (status == OS_ERR_MAX_PROCESSES) {
+			printf(" -> \x1b[1;31m[ERROR]\x1b[0m Process table is full. Could not load '%s'.\n", args[i]);
+		} else if (status == OS_ERR_DISK) {
+			printf(" -> \x1b[1;31m[ERROR]\x1b[0m File '%s' not found or Virtual Disk is full.\n", args[i]);
+		} else if (status == OS_ERR_MEMORY) {
+			printf(" -> \x1b[1;31m[ERROR]\x1b[0m Not enough contiguous RAM blocks to load '%s'.\n", args[i]);
+		}
 	}
 
-	printf("\x1b[32mAll processes loaded and executing in background.\x1b[0m\n");
-	
+	printf("\n\x1b[32mProcess loading phase completed\x1b[0m\n");
 	return CMD_SUCCESS;
 }
 
@@ -484,7 +490,7 @@ ConsoleStatus_t consoleStart(void) {
 	char command[CONSOLE_BUFFER_SIZE];
 	char* argument[MAX_PROCESSES];
 	int argCount = 0;
-	CommandStatus_t output = CMD_UNKNOWN;
+	CommandStatus_t output = CMD_SUCCESS;
 	
 	printReplInit();
 	loggerLogKernel(LOG_INFO, "Console interface initialized and ready");
