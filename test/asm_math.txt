@@ -9,7 +9,7 @@ _start 1
 03100005   // 06. DIVI 5      Immediate -> AC = 60 / 5 = 12
 01100003   // 07. RES 3       Immediate -> AC = 12 - 3 = 9
 05000012   // 08. STR 12      Direct -> Save final resul
-04100000   // 09. LOAD 0      Exit Code
+04100001   // 09. LOAD 1      Exit Code
 13000000   // 00. SVC         Terminate
 00000000   // 11. Var1        Reserved space
 00000000   // 12. Result      Reserved space

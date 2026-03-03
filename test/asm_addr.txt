@@ -6,7 +6,7 @@ _start 1
 04100010   // 03. LOAD 10     Immediate. AC = 10
 04200010   // 04. LOAD 10+AC  Indexed. Read RAM[10+10] = RAM[20]. AC must be 777
 05000021   // 05. STR 21      Direct. Store what we read (777)
-04100000   // 06. LOAD 0
+04100001   // 06. LOAD 1
 13000000   // 07. SVC
 00000000   // ...             Padding up to 20
 00000000

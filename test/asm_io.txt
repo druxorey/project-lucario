@@ -1,0 +1,21 @@
+_start 1
+.NumeroPalabras 18
+.NombreProg CalcInteractiva
+04100015   // 00. LOAD 15 (Inmediato) -> AC = 15
+00100025   // 01. SUM 25  (Inmediato) -> AC = 15 + 25 = 40
+05000017   // 02. STR 17  (Directo)   -> Guardar el 40 en la variable
+25000000   // 03. PSH     (Nulo)      -> Empujar AC (40) a la pila para imprimirlo
+04100002   // 04. LOAD 2  (Inmediato) -> AC = 2 (Código Syscall: Imprimir)
+13000000   // 05. SVC     (Nulo)      -> El SO imprime «40» en el monitor
+04100003   // 06. LOAD 3  (Inmediato) -> AC = 3 (Código Syscall: Leer Teclado)
+13000000   // 07. SVC     (Nulo)      -> El SO pide input. El AC recibe el número.
+00000017   // 08. SUM 17  (Directo)   -> AC = (Input del usuario) + 40
+05000017   // 09. STR 17  (Directo)   -> Actualizamos la variable con el total
+25000000   // 10. PSH     (Nulo)      -> Empujamos el nuevo total a la pila
+04100002   // 11. LOAD 2  (Inmediato) -> AC = 2 (Código Syscall: Imprimir)
+13000000   // 12. SVC     (Nulo)      -> El SO imprime el total definitivo
+04100000   // 13. LOAD 0  (Inmediato) -> AC = 0 (Código de salida deseado)
+25000000   // 14. PSH     (Nulo)      -> Empujamos el código de salida a la pila
+04100001   // 15. LOAD 1  (Inmediato) -> AC = 1 (Código Syscall: Terminar)
+13000000   // 16. SVC     (Nulo)      -> El SO mata el proceso y libera la RAM
+00000000   // 17. [Variable 'Result'] -> Espacio en memoria reservado

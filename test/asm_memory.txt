@@ -33,6 +33,6 @@ _start 1
 01100050   // 29. RES 50      AC=50
 05000011   // 30. STR [11]    Store AC=50 in M[11]
 04000011   // 31. LOAD [11]   Load M[11] -> AC=50
-04100000   // 32. LOAD 0      Exit code, AC=0
+04100001   // 32. LOAD 1      Exit code, AC=1
 13000000   // 33. SVC
 00000000   // 34.             Padding

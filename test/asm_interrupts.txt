@@ -10,5 +10,5 @@ _start 1
 18100000   // 06. CHMOD 0     Switch to USER Mode
 15000000   // 07. HAB         Enable interrupts; handle pending ones
 13000000   // 08. SVC         Service; immediate with IRQ enabled
-04100000   // 09. LOAD 0      Exit code, AC=0
+04100001   // 09. LOAD 1      Exit code, AC=1
 13000000   // 10. SVC EXIT    stops execution

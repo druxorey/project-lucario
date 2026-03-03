@@ -34,6 +34,6 @@ _start 1
 04100000   // 30. LOAD 0      Safety termination
 13000000   // 31. SVC
 26000000   // 32. POP         RL success: clear expected
-04100000   // 33. LOAD 0
+04100001   // 33. LOAD 1
 13000000   // 34. SVC
 00000000   // 35.             Padding
