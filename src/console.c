@@ -295,7 +295,7 @@ CommandStatus_t startMonitorSession(void) {
 	printf("\x1b[s\x1b[?1049h"); // ANSI Sequence to switch to alternate screen and save cursor position
 	printf("\x1b[2J\x1b[H"); // Clear screen and move cursor to top-left
 	
-	printf("\x1b[36m--- MONITOR MODE (Press ESC to return to console) ---\x1b[0m\n\n");
+	printf("\x1b[34m--- MONITOR MODE (Press ESC to return to console) ---\x1b[0m\n\n");
 
 	for (int i = 0; i < historyCount; i++) printf("%s\n", monitorHistory[i]);
 
@@ -313,31 +313,20 @@ CommandStatus_t startMonitorSession(void) {
 			usleep(50000);
 			continue;
 		}
+
 		char c = getchar();
-		if (c == EOF) continue;
-		if (c == 27) break; // ESC key to exit monitor
-		else if (c == '\n' || c == '\r') {
-			inputBuffer[inputPos] = '\0';
-			
-			char formattedMsg[MAX_LINE_LENGTH];
-			snprintf(formattedMsg, sizeof(formattedMsg), "> [User]: %s", inputBuffer);
-			
-			printf("\r\n");
-			monitorPrint(formattedMsg);
-			
-			inputPos = 0;
+		if (c == EOF) {
+			clearerr(stdin); 
+			continue;
 		}
-		else if (c == 127 || c == 8) {
+		if (c == 27) {
+			break; // ESC key to exit monitor
+		} else if (c == 127 || c == 8) {
 			if (inputPos > 0) {
 				inputPos--;
 				printf("\b \b");
 				fflush(stdout);
 			}
-		}
-		else if (isprint(c) && inputPos < (MAX_LINE_LENGTH - 1)) {
-			inputBuffer[inputPos++] = c;
-			putchar(c);
-			fflush(stdout);
 		}
 	}
 

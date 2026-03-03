@@ -87,6 +87,7 @@ void loggerLogKernel(LogLevel_t level, const char* message) {
 void loggerLogInterrupt(InterruptCode_t code) {
 	const char *message = "Unknown interrupt code";
 	bool isError = false;
+	char messageBuffer[LOG_BUFFER_SIZE];
 
 	switch (code) {
 		case IC_INVALID_SYSCALL: message = "Invalid system call interrupt"; break;
@@ -109,12 +110,8 @@ void loggerLogInterrupt(InterruptCode_t code) {
 		default: break;
 	}
 
-	if (isError) {
-		loggerLogHardware(LOG_ERROR, message);
-		printf("\x1b[31m[ERROR]\x1b[0m: %s\n", message);
-	} else {
-		loggerLogHardware(LOG_WARNING, message);
-		printf("\x1b[33m[WARN]\x1b[0m: %s\n", message);
-	}
+	if (isError) loggerLogHardware(LOG_ERROR, message);
+	else loggerLogHardware(LOG_WARNING, message);
+
 	fflush(hardwareLogFile);
 }

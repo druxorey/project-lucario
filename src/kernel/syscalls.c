@@ -36,7 +36,7 @@ SyscallStatus_t handleSyscall(void) {
 				
 				if (OS_MONITOR_ACTIVE) {
 					char msg[256];
-					snprintf(msg, sizeof(msg), "[PID %d - %s] Salida: %d", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName, valueToPrint);
+					snprintf(msg, sizeof(msg), "[PID %d - %s] Output: %d", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName, valueToPrint);
 					monitorPrint(msg);
 					
 					snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [2]: Process PID [%d] printed value %d", PROCESS_TABLE[currentActiveProcess].pid, valueToPrint);
@@ -65,21 +65,19 @@ SyscallStatus_t handleSyscall(void) {
 				clearerr(stdin);
 				
 				int userInput = 0;
-				printf("\r\x1b[2K\x1b[33m[PID %d - %s] solicita entrada:\x1b[0m ", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName);
+				printf("\r\x1b[2K\x1b[33m[PID %02d - %s] request input:\x1b[0m ", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName);
 				fflush(stdout);
 				
 				if (scanf("%d", &userInput) != 1) { // Read from user, expecting an integer
 					userInput = 0;
 					clearerr(stdin); // Clear EOF flag if set by invalid input
-					while (getchar() != '\n' && !feof(stdin)); 
+					while (getchar() != '\n' && !feof(stdin));
 				}
 				
 				writeMemory(CPU.SP, intToWord(userInput, &CPU.PSW));
 				
 				snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [3]: Process PID [%d] read value %d", PROCESS_TABLE[currentActiveProcess].pid, userInput);
 				loggerLogKernel(LOG_INFO, logBuffer);
-				
-				printf("\r\n");
 				
 				enableRawMode();
 				isSyscallReading = false;

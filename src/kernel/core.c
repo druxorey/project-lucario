@@ -43,7 +43,7 @@ void* cpuThreadWorker(void* arg) {
 				schedulerTick();
 			}
 			
-			usleep(100000);
+			usleep(250000);
 		} else {
 			usleep(100000);
 			schedulerTick();
