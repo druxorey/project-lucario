@@ -56,6 +56,12 @@ SyscallStatus_t handleSyscall(void) {
 					
 					return SYSCALL_BLOCK;
 				}
+				
+			} else {
+				loggerLogKernel(LOG_ERROR, "SYSCALL [2]: Print requested, but failed to read value from stack.");
+				return SYSCALL_HALT;
+			}
+
 		case 3:
 			if (OS_MONITOR_ACTIVE) {
 				isSyscallReading = true;
@@ -111,10 +117,6 @@ SyscallStatus_t handleSyscall(void) {
 				return SYSCALL_BLOCK;
 			} else {
 				loggerLogKernel(LOG_ERROR, "SYSCALL [4]: Sleep requested, but failed to read tics from stack.");
-				return SYSCALL_HALT;
-			}
-			} else {
-				loggerLogKernel(LOG_ERROR, "SYSCALL [2]: Print requested, but failed to read value from stack.");
 				return SYSCALL_HALT;
 			}
 
