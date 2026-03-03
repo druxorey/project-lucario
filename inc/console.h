@@ -42,6 +42,9 @@ typedef enum {
 	CONSOLE_RUNTIME_ERROR = 1  /**< The console session ended due to a critical system error. */
 } ConsoleStatus_t;
 
+CommandStatus_t enableRawMode(void);
+CommandStatus_t disableRawMode(void);
+
 /**
  * @brief Parses and tokenizes the raw user input.
  *
@@ -111,5 +114,7 @@ CommandStatus_t handleDebugCommand(char* argument);
  * @return ConsoleStatus_t CONSOLE_SUCCESS on normal exit, or CONSOLE_RUNTIME_ERROR on failure.
  */
 ConsoleStatus_t consoleStart(void);
+
+extern bool isSyscallReading;
 
 #endif // CONSOLE_H

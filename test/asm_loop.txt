@@ -12,6 +12,6 @@ _start 1
 10000007   // 08. JMPNE 07    Is AC != 2? If 4 or 3, loop back to 07 (RES 1)
 09000010   // 09. JMPE 10     Is AC == 2? If 2, jump to cleanup (10)
 26000000   // 11. POP         Increment SP, "delete" the 2
-04100000   // 12. LOAD 0      Exit code
+04100001   // 12. LOAD 1      Exit code
 13000000   // 13. SVC
 00000000   // 14.             Padding

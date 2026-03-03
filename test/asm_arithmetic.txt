@@ -21,6 +21,6 @@ _start 1
 00100009   // 17. SUM 9       AC=10
 05000010   // 18. STR [10]    Store AC=10 in M[10]
 04000010   // 19. LOAD [10]   Load M[10] -> AC=10
-04100000   // 20. LOAD 0      Exit code, AC=0
+04100001   // 20. LOAD 1      Exit code, AC=1
 13000000   // 21. SVC
 00000000   // 22.             Padding

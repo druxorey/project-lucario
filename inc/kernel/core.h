@@ -64,4 +64,7 @@ int getFreePCBIndex(void);
  */
 OSStatus_t createProcess(char* progName);
 
+extern int currentActiveProcess;  /**< @brief Index of the currently active process in the Process Table. */
+extern bool osYield;              /**< @brief Flag to request a context switch from the CPU to the OS. */
+
 #endif /* CORE_H */

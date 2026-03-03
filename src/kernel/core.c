@@ -4,34 +4,50 @@
 
 #include <string.h>
 #include "../../inc/logger.h"
+#include "../../inc/hardware/disk.h"
+#include "../../inc/hardware/memory.h"
+#include "../../inc/hardware/cpu.h"
 #include "../../inc/kernel/core.h"
 #include "../../inc/kernel/mmu.h"
 #include "../../inc/kernel/vfs.h"
-#include "../../inc/hardware/disk.h"
-#include "../../inc/hardware/memory.h"
+#include "../../inc/kernel/scheduler.h"
 
 PCB_t PROCESS_TABLE[MAX_PROCESSES];
+int currentActiveProcess = -1;
+bool osYield = false;
 
-static int nextPid = 1;
-static int currentActiveProcess = -1;
 static bool osRunning = false;
+static int nextPid = 1;
 static pthread_t cpuThread;
 
 void* cpuThreadWorker(void* arg) {
 	(void)arg;
 	loggerLogKernel(LOG_INFO, "CPU Background Thread started");
 
+	schedulerTick();
+
 	while (osRunning) {
-		// Here we will check if there are READY processes before calling cpuStep()
-		
-		// Simulation: Check for active processes (this is a placeholder, actual implementation would check the process scheduler)
-		// if (procesosActivos > 0) {
-		//     cpuStep();
-		// } else {
-		//     usleep(10000); // 10ms de descanso si no hay procesos
-		// }
-		
-		usleep(100000); // Temporal to keep the thread alive and sleeping to avoid burning the real CPU.
+		if (currentActiveProcess != -1) {
+			bool keepRunning = cpuStep();
+			
+			if (!keepRunning) {
+				char logBuffer[LOG_BUFFER_SIZE];
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "Process PID [%d] terminated. Cleaning resources.", PROCESS_TABLE[currentActiveProcess].pid);
+				loggerLogKernel(LOG_INFO, logBuffer);
+				freeMemory(PROCESS_TABLE[currentActiveProcess].startBlock, PROCESS_TABLE[currentActiveProcess].blockCount);
+				PROCESS_TABLE[currentActiveProcess].state = FINISHED;
+				osYield = false;
+				schedulerTick();
+			} else if (osYield) {
+				osYield = false;
+				schedulerTick();
+			}
+			
+			usleep(250000);
+		} else {
+			usleep(100000);
+			schedulerTick();
+		}
 	}
 
 	loggerLogKernel(LOG_INFO, "CPU Background Thread stopped");

@@ -7,7 +7,8 @@
 #include "../../inc/logger.h"
 #include "../../inc/hardware/cpu.h"
 #include "../../inc/hardware/memory.h"
-#include "../../inc/kernel/scheduler.h"
+#include "../../inc/kernel/core.h"
+#include "../../inc/kernel/syscalls.h"
 
 static uint16_t interruptBitmap = 0;
 static int64_t interruptValue = 0;
@@ -137,6 +138,7 @@ bool checkInterrupts(void) {
 
 bool handleInterrupt(InterruptCode_t code) {
 	int syscallCode;
+	char messageBuffer[LOG_BUFFER_SIZE];
 	switch (code) {
 		case IC_INVALID_INSTR:
 			loggerLogHardware(LOG_ERROR, "Invalid Instruction: CPU Halt triggered");
@@ -153,28 +155,24 @@ bool handleInterrupt(InterruptCode_t code) {
 			CPU.AC = intToWord(0, &CPU.PSW);
 			loggerLogHardware(LOG_INFO, "Arithmetic Underflow: Value clamped to 0");
 			return true;
-		case IC_TIMER: // Simulate program pause
-			schedulerTick();
+		case IC_TIMER:
 			loggerLogHardware(LOG_INFO, "Timer Interrupt: External clock tick received");
+			osYield = true;
 			return true;
 		case IC_IO_DONE: // Simulate program resume after I/O completion
 			loggerLogHardware(LOG_INFO, "I/O Interrupt: Peripheral operation completed");
 			return true;
-		case IC_SYSCALL:
-			syscallCode = wordToInt(CPU.AC);
-			if (syscallCode == 0) {
-				loggerLogHardware(LOG_INFO, "SYSCALL [0]: Program requested EXIT");
-				printf("SYSTEM CALL [0]: Program requested termination (EXIT).\n");
+		case IC_SYSCALL: {
+			SyscallStatus_t sysStatus = handleSyscall();
+			if (sysStatus == SYSCALL_HALT) {
 				return false;
-			} else {
-				// Any other code is considered a service request that does NOT stop the CPU
-				snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [%d]: Service requested by process", syscallCode);
-				loggerLogHardware(LOG_INFO, logBuffer);
-				printf("SYSTEM CALL [%d]: Service handled (Simulation).\n", syscallCode);
-				// In the future an interrupt will be generated here, but the CPU does NOT stop,
-				// it simply continues to the next instruction after being serviced.
+			} else if (sysStatus == SYSCALL_BLOCK) {
+				osYield = true;
 				return true;
 			}
+			
+			return true;
+		}
 		case IC_INVALID_SYSCALL:
 			loggerLogHardware(LOG_ERROR, "Exception: Invalid System Call code");
 			return true;
