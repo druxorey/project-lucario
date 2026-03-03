@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "../../inc/logger.h"
+#include "../../inc/console.h"
 #include "../../inc/kernel/scheduler.h"
 #include "../../inc/kernel/core.h"
 
