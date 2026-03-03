@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include "../../inc/kernel/syscalls.h"
 #include "../../inc/kernel/core.h"
 #include "../../inc/hardware/cpu.h"
@@ -55,7 +56,65 @@ SyscallStatus_t handleSyscall(void) {
 					
 					return SYSCALL_BLOCK;
 				}
+		case 3:
+			if (OS_MONITOR_ACTIVE) {
+				isSyscallReading = true;
+				usleep(150000);
 
+				disableRawMode();
+				clearerr(stdin);
+				
+				int userInput = 0;
+				printf("\r\x1b[2K\x1b[33m[PID %d - %s] solicita entrada:\x1b[0m ", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName);
+				fflush(stdout);
+				
+				if (scanf("%d", &userInput) != 1) { // Read from user, expecting an integer
+					userInput = 0;
+					clearerr(stdin); // Clear EOF flag if set by invalid input
+					while (getchar() != '\n' && !feof(stdin)); 
+				}
+				
+				writeMemory(CPU.SP, intToWord(userInput, &CPU.PSW));
+				
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [3]: Process PID [%d] read value %d", PROCESS_TABLE[currentActiveProcess].pid, userInput);
+				loggerLogKernel(LOG_INFO, logBuffer);
+				
+				printf("\r\n");
+				
+				enableRawMode();
+				isSyscallReading = false;
+				
+				return SYSCALL_SUCCESS;
+			} else {
+				PROCESS_TABLE[currentActiveProcess].state = BLOCKED_IO;
+				
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [3]: Process PID [%d] BLOCKED_IO waiting for monitor", PROCESS_TABLE[currentActiveProcess].pid);
+				loggerLogKernel(LOG_INFO, logBuffer);
+				
+				word savedPcWord;
+				readMemory(CPU.SP + 1, &savedPcWord);
+				int savedPc = wordToInt(savedPcWord);
+				writeMemory(CPU.SP + 1, intToWord(savedPc - 1, &CPU.PSW));
+				
+				return SYSCALL_BLOCK;
+			}
+
+		case 4:
+			status = readMemory(userSP, &param);
+			if (status == MEM_SUCCESS) {
+				int sleepTics = wordToInt(param);
+				
+				PROCESS_TABLE[currentActiveProcess].sleepTics = sleepTics;
+				PROCESS_TABLE[currentActiveProcess].state = BLOCKED;
+				
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [4]: Process PID [%d] sleeping for %d tics", PROCESS_TABLE[currentActiveProcess].pid, sleepTics);
+				loggerLogKernel(LOG_INFO, logBuffer);
+				
+				return SYSCALL_BLOCK;
+			} else {
+				loggerLogKernel(LOG_ERROR, "SYSCALL [4]: Sleep requested, but failed to read tics from stack.");
+				return SYSCALL_HALT;
+			}
 			} else {
 				loggerLogKernel(LOG_ERROR, "SYSCALL [2]: Print requested, but failed to read value from stack.");
 				return SYSCALL_HALT;

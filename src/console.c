@@ -22,38 +22,7 @@ static char monitorHistory[MAX_HISTORY_LINES][MAX_LINE_LENGTH];
 static int historyCount = 0;
 static struct termios origTermios;
 bool OS_MONITOR_ACTIVE;
-
-#ifdef DEBUG
-static CommandStatus_t populateMockData(void) {
-	PROCESS_TABLE[0].pid = 1;
-	PROCESS_TABLE[0].state = EXECUTING;
-	strcpy(PROCESS_TABLE[0].programName, "calculadora.txt");
-	PROCESS_TABLE[0].startBlock = 0;
-	PROCESS_TABLE[0].blockCount = 2;
-	FREE_PARTITIONS[0] = false; // Bloque 0 ocupado
-	FREE_PARTITIONS[1] = false; // Bloque 1 ocupado
-
-	PROCESS_TABLE[1].pid = 2;
-	PROCESS_TABLE[1].state = BLOCKED_IO;
-	strcpy(PROCESS_TABLE[1].programName, "juego_adivina.txt");
-	PROCESS_TABLE[1].startBlock = 2;
-	PROCESS_TABLE[1].blockCount = 1;
-	FREE_PARTITIONS[2] = false; // Bloque 2 ocupado
-
-	PROCESS_TABLE[2].pid = 3;
-	PROCESS_TABLE[2].state = READY;
-	strcpy(PROCESS_TABLE[2].programName, "analisis_datos.txt");
-	PROCESS_TABLE[2].startBlock = 3;
-	PROCESS_TABLE[2].blockCount = 3;
-	FREE_PARTITIONS[3] = false;
-	FREE_PARTITIONS[4] = false;
-	FREE_PARTITIONS[5] = false;
-
-	printf("\x1b[32m[DEBUG]: Mock data populated successfully.\x1b[0m\n");
-	return CMD_SUCCESS;
-}
-#endif
-
+bool isSyscallReading = false;
 
 static char* trimWhitespace(char* string) {
 	char* source = string;
@@ -243,19 +212,22 @@ static CommandStatus_t printMemoryStatus(void) {
 }
 
 
-static CommandStatus_t enableRawMode(void) {
+CommandStatus_t enableRawMode(void) {
 	if (tcgetattr(STDIN_FILENO, &origTermios) == -1) return CMD_RUNTIME_ERROR;
 	
 	struct termios raw = origTermios;
-	// We shutdown ECHO (don't print letters alone) and ICANON (read letter by letter without Enter)
 	raw.c_lflag &= ~(ECHO | ICANON);
+	
+	// NUEVO: Tiempo de espera (Timeout) para getchar()
+	raw.c_cc[VMIN] = 0;   // 0 caracteres mínimos para retornar
+	raw.c_cc[VTIME] = 1;  // 1 decima de segundo de timeout (100ms)
 	
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) return CMD_RUNTIME_ERROR;
 	return CMD_SUCCESS;
 }
 
 
-static CommandStatus_t disableRawMode(void) {
+CommandStatus_t disableRawMode(void) {
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &origTermios) == -1) return CMD_RUNTIME_ERROR;
 	return CMD_SUCCESS;
 }
@@ -337,7 +309,12 @@ CommandStatus_t startMonitorSession(void) {
 	int inputPos = 0;
 
 	while (true) {
+		if (isSyscallReading) {
+			usleep(50000);
+			continue;
+		}
 		char c = getchar();
+		if (c == EOF) continue;
 		if (c == 27) break; // ESC key to exit monitor
 		else if (c == '\n' || c == '\r') {
 			inputBuffer[inputPos] = '\0';
@@ -576,15 +553,6 @@ ConsoleStatus_t consoleStart(void) {
 				continue;
 			}
 			output = printMemoryStatus();
-		#ifdef DEBUG
-		} else if (strcmp(command, "testprint") == 0) { // Debug command to test monitor output without running a program
-			char msg[256];
-			snprintf(msg, sizeof(msg), "[PID 99] Prueba de salida asincrona numero %d", rand() % 100 + 1);
-			output = monitorPrint(msg);
-			printf("\x1b[32mMensaje enviado al monitor en segundo plano.\x1b[0m\n");
-		} else if (strcmp(command, "mock") == 0) { // Debug command to populate mock processes and memory state for testing 'ps' and 'memstat' commands
-			output = populateMockData();
-		#endif
 		} else {
 			printf("\x1b[1;31mUnknown command:\x1b[0m %s\n", command);
 			snprintf(logBuffer, LOG_BUFFER_SIZE, "Unknown command received: %s", command);

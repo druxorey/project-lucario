@@ -2,7 +2,6 @@
 #include <stdio.h>
 
 #include "../../inc/logger.h"
-#include "../../inc/console.h"
 #include "../../inc/kernel/scheduler.h"
 #include "../../inc/kernel/core.h"
 
@@ -15,6 +14,16 @@ void schedulerTick(void) {
 			if (PROCESS_TABLE[i].sleepTics == 0) {
 				PROCESS_TABLE[i].state = READY;
 				snprintf(logBuffer, LOG_BUFFER_SIZE, "[SCHEDULER] Process PID [%d] woke up and is now READY", PROCESS_TABLE[i].pid);
+				loggerLogKernel(LOG_INFO, logBuffer);
+			}
+		}
+	}
+
+	if (OS_MONITOR_ACTIVE) {
+		for (int i = 0; i < MAX_PROCESSES; i++) {
+			if (PROCESS_TABLE[i].state == BLOCKED_IO) {
+				PROCESS_TABLE[i].state = READY;
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "[SCHEDULER] Process PID [%d] unblocked because Monitor opened", PROCESS_TABLE[i].pid);
 				loggerLogKernel(LOG_INFO, logBuffer);
 			}
 		}
