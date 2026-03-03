@@ -8,7 +8,7 @@
 
 ## Description
 
-This is a university programming project for the **Operating Systems** course at **Universidad Central de Venezuela**. The goal of this project (Phase I) is to implement a virtual architecture running on native Linux. This software simulates the hardware layer including an accumulator-based processor, a memory management system, and a DMA controller to support the future implementation of a minikernel.
+This is a university programming project for the **Operating Systems** course at **Universidad Central de Venezuela**. The goal of this project is to implement a virtual architecture running on native Linux to implement a Minikernel capable of managing processes, memory, and I/O operations asynchronously. This software simulates the hardware layer including an accumulator-based processor, a memory management system, and a DMA controller to support the operating system that multiplexes a single virtual CPU among multiple user programs using a Round Robin scheduling algorithm.
 
 ## Key Features
 
@@ -16,6 +16,12 @@ This is a university programming project for the **Operating Systems** course at
 - **Virtual Memory:** Simulation of 2000 memory positions with protection registers (RB/RL).
 - **I/O System:** Full simulation of a shared bus, DMA controller, and a geometric disk structure (Tracks/Cylinders/Sectors).
 - **Execution Modes:** Runs in **Normal** mode for standard execution and **Debugger** mode for step-by-step instruction analysis.
+- **Process Management:** A fully functional Process Control Block (PCB) system supporting up to 20 concurrent processes with distinct states («NEW», «READY», «EXECUTING», «BLOCKED», «BLOCKED_IO», and «FINISHED»).
+- **Round Robin Scheduler:** A background kernel thread multiplexes the CPU using a time quantum of 2 clock ticks, executing automatic context switches.
+- **Memory Management Unit (MMU):** Static memory partitioning system that dynamically allocates and frees RAM blocks based on the program's required size.
+- **Virtual File System (VFS):** Programs are first injected into a 3D Virtual Disk (Tracks/Cylinders/Sectors) and cataloged before being transferred to RAM via DMA.
+- **Asynchronous I/O Monitor:** A dedicated raw-mode sub-terminal to handle System Calls (SVC 2 & SVC 3). Programs requesting I/O automatically yield the CPU and wait for the user to open the monitor.
+- **Dual-Mode Processor:** Supports both Privileged (Kernel) and User execution modes, with memory boundary protection (RB/RL registers).
 
 ## Build
 
@@ -74,17 +80,21 @@ make clean
 
 ## Usage
 
-Upon execution, the system launches the **Interactive Console**, indicated by the `LUCARIO >` prompt.
+Upon execution, the system launches the **Interactive Console**, indicated by the `LUCARIO >` prompt. Because the OS runs in a background thread, the console will **never block**, allowing you to inspect the system while programs execute.
 
 ### Main Commands
 
 | Command | Description |
-| :--- | :--- |
-| `RUN <file>` | Loads and executes the specified program in **Normal Mode** (Continuous execution). |
-| `DEBUG <file>` | Loads and starts the program in **Debug Mode** (Step-by-Step). |
-| `LIST` | Lists available files in the current directory. |
-| `COMANDS` | Displays the help menu with available commands. |
-| `EXIT` | Shuts down the virtual machine and cleans up resources. |
+| --- | --- |
+| `run <file1> [file2]...` | Loads and executes up to 20 programs concurrently in the background. |
+| `ps` | Displays all active processes showing PID, state, memory usage (%), and program name. |
+| `memstat` | Shows a map of the physical memory partitions (Blocks 0-19) and total RAM usage. |
+| `monitor` | Opens a secondary raw-mode terminal for asynchronous program Input/Output. |
+| `debug <file>` | Loads and starts a single program in **Debug Mode** (Step-by-Step). |
+| `list` | Lists all files available in the host's current directory. |
+| `help` | Displays the manual and the command list with a detailed usage. |
+| `restart` | Reboots the Lucario System, flushing memory and process tables. |
+| `shutdown` | Safely stops the kernel thread, shuts down the system, and exits. |
 
 > **Note:** The file must exist in the project directory or provide a valid path.
 
@@ -93,13 +103,9 @@ When you run `DEBUG <filename>`, the system enters an interactive inspection ses
 
 | Command | Description |
 | :--- | :--- |
-| `STEP` (or `ENTER`) | Executes the next instruction cycle (Fetch-Decode-Execute). |
-| `REGS` | Prints the full state of the CPU (PC, AC, IR, SP, MAR, MDR, etc.). |
-| `QUIT` | Stops the debugging session and returns to the main `LUCARIO >` console. |
-
-**Output details in Debug Mode:**
-- **Execution Log:** After every step, it displays the executed PC address, the raw instruction code, and the resulting value in the Accumulator (AC).
-- **Interrupts:** Any hardware interrupt (Timer, I/O, Overflow) triggered during the step will be displayed immediately.
+| `step` (or `ENTER`) | Executes the next instruction cycle (Fetch-Decode-Execute). |
+| `regs` | Prints the full state of the CPU (PC, AC, IR, SP, MAR, MDR, etc.). |
+| `quit` | Stops the debugging session and returns to the main `LUCARIO >` console. |
 
 For a deep dive into the simulated hardware specifications (Instruction Set, Memory Layout, and Interrupts), please refer to the [Virtual Architecture Reference](docs/ARCHITECTURE.md).
 
