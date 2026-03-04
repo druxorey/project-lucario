@@ -89,6 +89,7 @@ Upon execution, the system launches the **Interactive Console**, indicated by th
 | `run <file1> [file2]...` | Loads and executes up to 20 programs concurrently in the background. |
 | `ps` | Displays all active processes showing PID, state, memory usage (%), and program name. |
 | `memstat` | Shows a map of the physical memory partitions (Blocks 0-19) and total RAM usage. |
+| `diskstat` | Shows a map of the physical disk and the programs saved in disk. |
 | `monitor` | Opens a secondary raw-mode terminal for asynchronous program Input/Output. |
 | `debug <file>` | Loads and starts a single program in **Debug Mode** (Step-by-Step). |
 | `list` | Lists all files available in the host's current directory. |

@@ -5,7 +5,7 @@
  * Declares data structures and functions to manage the Virtual File System (VFS),
  * read program metadata, and store them in the Virtual Hardware.
  *
- * @version 1.2
+ * @version 1.3
  */
 
 #ifndef VFS_H
@@ -57,6 +57,15 @@ typedef struct {
 	int startPC;            /**< Starting Program Counter (PC) value for execution */
 } FileMeta_t;
 
+/**
+ * @brief Retrieves the current number of files registered in the catalog.
+ */
+int vfsGetCatalogCount(void);
+
+/**
+ * @brief Retrieves the metadata of a specific catalog entry by its index.
+ */
+VFSStatus_t vfsGetCatalogEntry(int index, FileMeta_t* outMeta);
 
 /**
  * @brief Checks if a file exists in the VFS catalog.

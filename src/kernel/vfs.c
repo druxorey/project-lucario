@@ -14,6 +14,20 @@ static uint8_t freeTrack = 0;
 static uint8_t freeCylinder = 0;
 static uint8_t freeSector = 0;
 
+int vfsGetCatalogCount(void) {
+	return catalogCount;
+}
+
+
+VFSStatus_t vfsGetCatalogEntry(int index, FileMeta_t* outMeta) {
+	if (index < 0 || index >= catalogCount) return VFS_ERR_NOT_FOUND;
+	if (outMeta != NULL) {
+		*outMeta = diskCatalog[index];
+	}
+	return VFS_SUCCESS;
+}
+
+
 bool vfsFileExists(const char* fileName) {
 	for (int i = 0; i < catalogCount; i++) {
 		if (strcmp(diskCatalog[i].fileName, fileName) == 0) return true;

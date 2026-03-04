@@ -15,8 +15,8 @@
 #include "../inc/definitions.h"
 
 #define CONSOLE_BUFFER_SIZE 512 /** @brief Maximum character length for a console input line. */
-#define MAX_HISTORY_LINES   100
-#define MAX_LINE_LENGTH     256
+#define MAX_HISTORY_LINES   100 /** @brief Maximum number of lines to keep in the command history. */
+#define MAX_LINE_LENGTH     256 /** @brief Maximum character length for a single line in the command history. */
 
 /**
  * @brief Command Execution Status Codes.

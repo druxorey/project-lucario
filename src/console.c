@@ -110,6 +110,8 @@ static CommandStatus_t printHelpList(void) {
 	printf("  Displays all active processes (PID, state, memory, name).\n\n");
 	printf("  \x1b[1mmemstat\x1b[0m\n");
 	printf("  Shows physical memory content and current usage percentage.\n\n");
+	printf("  \x1b[1mdiskstat\x1b[0m\n");
+	printf("  Shows physical disk content and current programs saved.\n\n");
 	printf("  \x1b[1mmonitor\x1b[0m\n");
 	printf("  Opens a secondary terminal for program Input/Output.\n\n");
 	printf("  \x1b[1mlist\x1b[0m\n");
@@ -208,6 +210,100 @@ static CommandStatus_t printMemoryStatus(void) {
 	printf("       Total RAM Usage: %d%%\n\n", (occupiedBlocks * 100) / MAX_PROCESSES);
 	
 	loggerLogKernel(LOG_INFO, "User executed 'memstat' command");
+	return CMD_SUCCESS;
+}
+
+
+static CommandStatus_t printDiskStatus(void) {
+	printf("\n\x1b[34m------------------------- DISK STATUS (diskstat) -------------------------\x1b[0m\n");
+	int catCount = vfsGetCatalogCount();
+	int diskMap[DISK_TRACKS][DISK_CYLINDERS][DISK_SECTORS];
+	for (int t = 0; t < DISK_TRACKS; t++) {
+		for (int c = 0; c < DISK_CYLINDERS; c++) {
+			for (int s = 0; s < DISK_SECTORS; s++) {
+				diskMap[t][c][s] = -1;
+			}
+		}
+	}
+
+	int totalSectors = DISK_TRACKS * DISK_CYLINDERS * DISK_SECTORS;
+	int occupiedSectors = 0;
+
+	for (int i = 0; i < catCount; i++) {
+		FileMeta_t meta;
+		vfsGetCatalogEntry(i, &meta);
+		
+		int t = meta.startTrack;
+		int c = meta.startCylinder;
+		int s = meta.startSector;
+		
+		for (int w = 0; w < meta.wordCount; w++) {
+			if (t < DISK_TRACKS && c < DISK_CYLINDERS && s < DISK_SECTORS) {
+				diskMap[t][c][s] = i;
+				occupiedSectors++;
+			}
+			s++;
+			if (s >= DISK_SECTORS) {
+				s = 0;
+				c++;
+				if (c >= DISK_CYLINDERS) {
+					c = 0;
+					t++;
+				}
+			}
+		}
+	}
+
+	const char* symbols = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	int numSymbols = strlen(symbols);
+
+	printf(" \x1b[90m                (Visual Scale: 1 character = 10 sectors)\x1b[0m\n");
+	int globalSector = 0;
+	for (int t = 0; t < DISK_TRACKS; t++) {
+		printf(" TRK %02d | ", t);
+		for (int c = 0; c < DISK_CYLINDERS; c++) {
+			if (c == DISK_CYLINDERS / 2) printf("\n        | ");
+			printf("[");
+			for (int s = 0; s < DISK_SECTORS; s += 10) {
+				int fileId1 = diskMap[t][c][s];
+				int fileId2 = (s + 1 < DISK_SECTORS) ? diskMap[t][c][s+1] : -1;
+				int displayId = -1;
+				if      (fileId1 != -1) displayId = fileId1;
+				else if (fileId2 != -1) displayId = fileId2;
+
+				globalSector += 10;
+				if (displayId == -1) {
+					printf("\x1b[90m.\x1b[0m");
+				} else {
+					char sym = symbols[displayId % numSymbols];
+					if      (globalSector > 8642) printf("\x1b[31m%c\x1b[0m", sym);
+					else if (globalSector > 5313) printf("\x1b[33m%c\x1b[0m", sym);
+					else printf("\x1b[32m%c\x1b[0m", sym);
+				}
+			}
+			printf("] ");
+		}
+		printf("\n");
+	}
+
+	printf("--------------------------------------------------------------------------\n");
+	int usagePercent = (totalSectors > 0) ? (occupiedSectors * 100) / totalSectors : 0;
+	printf("                 Total Disk Usage: %d%% (%d / %d sectors)\n", usagePercent, occupiedSectors, totalSectors);
+	
+	if (catCount > 0) {
+		printf("\n \x1b[33mLoaded Programs:\x1b[0m\n");
+		for (int i = 0; i < catCount; i++) {
+			FileMeta_t meta;
+			vfsGetCatalogEntry(i, &meta);
+			char sym = symbols[i % numSymbols];
+			printf("  [\x1b[32m%c\x1b[0m] -> %-20s (Size: %d words)\n", sym, meta.fileName, meta.wordCount);
+		}
+	} else {
+		printf("\n  No programs currently loaded on virtual disk.\n");
+	}
+	printf("\n");
+
+	loggerLogKernel(LOG_INFO, "User executed 'diskstat' command");
 	return CMD_SUCCESS;
 }
 
@@ -542,6 +638,13 @@ ConsoleStatus_t consoleStart(void) {
 				continue;
 			}
 			output = printMemoryStatus();
+		} else if (strcmp(command, "diskstat") == 0) {
+			if (argCount > 0) {
+				printf("\x1b[1;31mError: Too many arguments for 'diskstat' command\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'diskstat' command");
+				continue;
+			}
+			output = printDiskStatus();
 		} else {
 			printf("\x1b[1;31mUnknown command:\x1b[0m %s\n", command);
 			snprintf(logBuffer, LOG_BUFFER_SIZE, "Unknown command received: %s", command);
