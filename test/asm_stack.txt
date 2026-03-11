@@ -1,20 +1,20 @@
 _start 1
 .NumeroPalabras 17
-.NombreProg TestAsmStack
-04100010   // 00. LOAD 10     AC=10
-25000000   // 01. PSH         Push AC. Pila: [10]
-04100020   // 02. LOAD 20     AC=20
-25000000   // 03. PSH         Push AC. Pila: [10, 20]
-04100030   // 04. LOAD 30     AC=30
-25000000   // 05. PSH         Push AC. Pila: [10, 20, 30]
-26000000   // 06. POP         Pop tope -> AC=30. Pila: [10, 20]
-26000000   // 07. POP         Pop tope -> AC=20. Pila: [10]
-01100005   // 08. RES 5       AC = 20 - 5 = 15
-25000000   // 09. PSH         Push 15. Pila: [10, 15] (Reemplaza el antiguo STRSP)
-26000000   // 10. POP         Pop tope -> AC=15. Pila: [10]
-26000000   // 11. POP         Pop tope -> AC=10. Pila: []
-00100007   // 12. SUM 7       AC = 10 + 7 = 17
-25000000   // 13. PSH         Push 17. Pila: [17] (Reemplaza el antiguo STRSP)
-26000000   // 14. POP         Pop tope -> AC=17. Pila: []
-04100001   // 15. LOAD 1      Código de salida normal, AC=1
-13000000   // 16. SVC         Llamada al sistema (Terminar)
+.NombreProg TestStack
+04100010   // 00. LOAD 10      Immediate  - AC = 10
+25000000   // 01. PSH          Implicit   - Push AC to stack
+04100020   // 02. LOAD 20      Immediate  - AC = 20
+25000000   // 03. PSH          Implicit   - Push AC to stack
+04100030   // 04. LOAD 30      Immediate  - AC = 30
+25000000   // 05. PSH          Implicit   - Push AC to stack
+26000000   // 06. POP          Implicit   - Pop stack to AC
+26000000   // 07. POP          Implicit   - Pop stack to AC
+01100005   // 08. RES 5        Immediate  - AC = AC - 5
+25000000   // 09. PSH          Implicit   - Push AC to stack
+26000000   // 10. POP          Implicit   - Pop stack to AC
+26000000   // 11. POP          Implicit   - Pop stack to AC
+00100007   // 12. SUM 7        Immediate  - AC = AC + 7
+25000000   // 13. PSH          Implicit   - Push AC to stack
+26000000   // 14. POP          Implicit   - Pop stack to AC
+04100001   // 15. LOAD 1       Immediate  - AC = 1
+13000000   // 16. SVC          Implicit   - System call
