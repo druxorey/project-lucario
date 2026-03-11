@@ -75,7 +75,7 @@ SyscallStatus_t handleSyscall(void) {
 				char msg[256];
 
 				while (!validInput) {
-					printf("\r\x1b[2K\x1b[33m[PID %02d - %s] request input:\x1b[0m ", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName);
+					printf("\r\x1b[2K\x1b[33m[PID %02d - %s] Request input:\x1b[0m ", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName);
 					fflush(stdout);
 					
 					if (scanf("%ld", &userInput) == 1) {
@@ -83,13 +83,13 @@ SyscallStatus_t handleSyscall(void) {
 					} else {
 						clearerr(stdin);
 						while (getchar() != '\n' && !feof(stdin));
-						printf("\r\x1b[2K\x1b[31m[ERROR] Invalid input. Please enter a numeric value\x1b[0m\n");
+						printf("\r\x1b[2K\x1b[31m[PID %02d - %s] [ERROR] Invalid input. Please enter a numeric value\x1b[0m\n", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName);
 					}
 				}
 
 				if (userInput > MAX_MAGNITUDE || userInput < -MAX_MAGNITUDE) {
 					char msg[256];
-					snprintf(msg, sizeof(msg), "\x1b[31m[WARN] Input exceeds architecture limits (7 digits). Truncating...\x1b[0m");
+					snprintf(msg, sizeof(msg), "\x1b[31m[PID %02d - %s] [ERROR] Input exceeds architecture limits (7 digits). Truncating...\x1b[0m", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName);
 					printf("%s\n", msg);
 					monitorSaveHistory(msg);
 					
@@ -97,7 +97,7 @@ SyscallStatus_t handleSyscall(void) {
 					loggerLogKernel(LOG_WARNING, logBuffer);
 				}
 				
-				snprintf(msg, sizeof(msg), "\x1b[33m[PID %02d - %s] request input:\x1b[0m %d", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName, (int32_t)userInput);
+				snprintf(msg, sizeof(msg), "\x1b[33m[PID %02d - %s] Request input:\x1b[0m %d", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName, (int32_t)userInput);
 				monitorSaveHistory(msg);
 				writeMemory(CPU.SP, intToWord((int32_t)userInput, &CPU.PSW));
 				
@@ -126,6 +126,19 @@ SyscallStatus_t handleSyscall(void) {
 			status = readMemory(userSP, &param);
 			if (status == MEM_SUCCESS) {
 				int sleepTics = wordToInt(param);
+
+				if (sleepTics < 0) {
+					char msg[256];
+					snprintf(msg, sizeof(msg), "\x1b[31m[PID %02d - %s] [ERROR] Invalid sleep duration (%d tics). Killing the process...\x1b[0m", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName, sleepTics);
+					monitorPrint(msg);
+					
+					snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [4]: Process PID [%d] requested negative sleep (%d). Terminating.", PROCESS_TABLE[currentActiveProcess].pid, sleepTics);
+					loggerLogKernel(LOG_WARNING, logBuffer);
+					
+					return SYSCALL_HALT;
+				}
+
+				if (sleepTics == 0) return SYSCALL_SUCCESS;
 				
 				PROCESS_TABLE[currentActiveProcess].sleepTics = sleepTics;
 				PROCESS_TABLE[currentActiveProcess].state = BLOCKED;
