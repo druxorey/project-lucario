@@ -542,6 +542,8 @@ CommandStatus_t handleDebugCommand(char* argument) {
 CommandStatus_t handleRestartCommand(void) {
 	cpuReset();
 	memoryReset();
+	osYield = false;
+	initOS();
 	printReplInit();
 	loggerLogKernel(LOG_INFO, "System restarted via CLI (restart command)");
 	return CMD_SUCCESS;
