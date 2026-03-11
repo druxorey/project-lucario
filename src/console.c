@@ -296,7 +296,7 @@ static CommandStatus_t printDiskStatus(void) {
 			FileMeta_t meta;
 			vfsGetCatalogEntry(i, &meta);
 			char sym = symbols[i % numSymbols];
-			printf("  [\x1b[32m%c\x1b[0m] -> %-20s (Size: %d words)\n", sym, meta.fileName, meta.wordCount);
+			printf("  [\x1b[32m%c\x1b[0m] -> %-20s (Size: %d words)\n", sym, meta.programName, meta.wordCount);
 		}
 	} else {
 		printf("\n  No programs currently loaded on virtual disk.\n");

@@ -168,9 +168,8 @@ OSStatus_t createProcess(char* progName) {
 	snprintf(logBuffer, LOG_BUFFER_SIZE, "Loaded %d words into RAM (Physical Base: %d)", meta.wordCount, RB);
 	loggerLogKernel(LOG_INFO, logBuffer);
 
-	// 5. Inicialización del Contexto (PCB.context)
 	PROCESS_TABLE[pcbIndex].pid = nextPid++;
-	strncpy(PROCESS_TABLE[pcbIndex].programName, meta.fileName, 255);
+	strncpy(PROCESS_TABLE[pcbIndex].programName, meta.programName, 255);
 	PROCESS_TABLE[pcbIndex].programName[255] = '\0';
 	PROCESS_TABLE[pcbIndex].startBlock = startBlock;
 	PROCESS_TABLE[pcbIndex].blockCount = requiredBlocks;
@@ -193,7 +192,7 @@ OSStatus_t createProcess(char* progName) {
 
 	PROCESS_TABLE[pcbIndex].state = READY;
 
-	snprintf(logBuffer, LOG_BUFFER_SIZE, "Process created successfully [PID %d] - '%s'", PROCESS_TABLE[pcbIndex].pid, meta.fileName);
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Process created successfully [PID %d] - '%s'", PROCESS_TABLE[pcbIndex].pid, meta.programName);
 	loggerLogKernel(LOG_INFO, logBuffer);
 	snprintf(logBuffer, LOG_BUFFER_SIZE, "PID %d Info -  Blocks: %d, RB: %d, RL: %d", PROCESS_TABLE[pcbIndex].pid, requiredBlocks, ctx->RB, ctx->RL);
 	loggerLogKernel(LOG_INFO, logBuffer);

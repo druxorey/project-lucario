@@ -49,7 +49,8 @@ typedef struct {
  * @brief File Metadata for the Disk Catalog.
  */
 typedef struct {
-	char fileName[256];     /**< Name of the program file (e.g., "calc.txt") */
+	char filePath[256];     /**< Path of the program file (e.g., "test/calc.txt") */
+	char programName[256];  /**< Internal name of the program (e.g., "CalcInteractiva") */
 	uint8_t startTrack;     /**< Track where the program starts in the virtual disk */
 	uint8_t startCylinder;  /**< Cylinder where the program starts */
 	uint8_t startSector;    /**< Sector where the program starts */
@@ -86,7 +87,7 @@ VFSStatus_t vfsGetMetadata(const char* fileName, FileMeta_t* outMeta);
  * @brief Registers a new file in the VFS catalog.
  * @return VFSStatus_t VFS_SUCCESS or VFS_ERR_DISK_FULL.
  */
-VFSStatus_t vfsRegisterFile(const char* fileName, uint8_t track, uint8_t cyl, uint8_t sec, int words, int startPC);
+VFSStatus_t vfsRegisterFile(const char* filePath, const char* programName, uint8_t track, uint8_t cyl, uint8_t sec, int words, int startPC);
 
 /**
  * @brief Clears the VFS catalog (Useful for tests and system restarts).
