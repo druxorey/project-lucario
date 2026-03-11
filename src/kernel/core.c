@@ -77,6 +77,7 @@ OSStatus_t osStop(void) {
 
 OSStatus_t initOS(void) {
 	mmuInit();
+	nextPid = 1;
 
 	for (int i = 0; i < MAX_PROCESSES; i++) {
 		PROCESS_TABLE[i].state = FINISHED;
