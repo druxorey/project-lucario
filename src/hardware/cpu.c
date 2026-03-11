@@ -666,7 +666,7 @@ CPUStatus_t execute(Instruction_t instruction) {
 		case OP_TTI:
 			if (fetchOperand(instruction, &interval) == INSTR_EXEC_SUCCESS) {
 				CPU.timerLimit = (uint64_t)wordToInt(interval);
-				snprintf(logBuffer, LOG_BUFFER_SIZE, "Timer interval set to %lu cycles\n", CPU.timerLimit);
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "Timer interval set to %lu cycles", CPU.timerLimit);
 				loggerLogHardware(LOG_INFO, logBuffer);
 				status = INSTR_EXEC_SUCCESS;
 			} else {

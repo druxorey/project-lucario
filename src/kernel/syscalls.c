@@ -70,7 +70,7 @@ SyscallStatus_t handleSyscall(void) {
 				disableRawMode();
 				clearerr(stdin);
 				
-				int userInput = 0;
+				int64_t userInput = 0;
 				bool validInput = false;
 				char msg[256];
 
@@ -78,7 +78,7 @@ SyscallStatus_t handleSyscall(void) {
 					printf("\r\x1b[2K\x1b[33m[PID %02d - %s] request input:\x1b[0m ", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName);
 					fflush(stdout);
 					
-					if (scanf("%d", &userInput) == 1) {
+					if (scanf("%ld", &userInput) == 1) {
 						validInput = true;
 					} else {
 						clearerr(stdin);
@@ -93,15 +93,15 @@ SyscallStatus_t handleSyscall(void) {
 					printf("%s\n", msg);
 					monitorSaveHistory(msg);
 					
-					snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [3]: User input '%d' caused hardware overflow. Truncating.", userInput);
+					snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [3]: User input '%ld' caused hardware overflow. Truncating.", userInput);
 					loggerLogKernel(LOG_WARNING, logBuffer);
 				}
 				
-				snprintf(msg, sizeof(msg), "\x1b[33m[PID %02d - %s] request input:\x1b[0m %d", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName, userInput);
+				snprintf(msg, sizeof(msg), "\x1b[33m[PID %02d - %s] request input:\x1b[0m %d", PROCESS_TABLE[currentActiveProcess].pid, PROCESS_TABLE[currentActiveProcess].programName, (int32_t)userInput);
 				monitorSaveHistory(msg);
-				writeMemory(CPU.SP, intToWord(userInput, &CPU.PSW));
+				writeMemory(CPU.SP, intToWord((int32_t)userInput, &CPU.PSW));
 				
-				snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [3]: Process PID [%d] read value %d", PROCESS_TABLE[currentActiveProcess].pid, userInput);
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "SYSCALL [3]: Process PID [%d] read value %d", PROCESS_TABLE[currentActiveProcess].pid, (int32_t)userInput);
 				loggerLogKernel(LOG_INFO, logBuffer);
 				
 				enableRawMode();
