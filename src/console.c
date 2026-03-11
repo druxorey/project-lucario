@@ -314,9 +314,9 @@ CommandStatus_t enableRawMode(void) {
 	struct termios raw = origTermios;
 	raw.c_lflag &= ~(ECHO | ICANON);
 	
-	// NUEVO: Tiempo de espera (Timeout) para getchar()
-	raw.c_cc[VMIN] = 0;   // 0 caracteres mínimos para retornar
-	raw.c_cc[VTIME] = 1;  // 1 decima de segundo de timeout (100ms)
+	// Timeout for getchar()
+	raw.c_cc[VMIN] = 0;   // 0 minimum characters to return
+	raw.c_cc[VTIME] = 1;  // 1 tenth of a second timeout (100ms)
 	
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) return CMD_RUNTIME_ERROR;
 	return CMD_SUCCESS;
@@ -362,26 +362,35 @@ CommandStatus_t parseInput(char* input, char* command, char** args, int* argCoun
 }
 
 
+CommandStatus_t monitorSaveHistory(const char* message) {
+	if (historyCount < MAX_HISTORY_LINES) {
+		strncpy(monitorHistory[historyCount], message, MAX_LINE_LENGTH - 1);
+		monitorHistory[historyCount][MAX_LINE_LENGTH - 1] = '\0';
+		historyCount++;
+	} else {
+		for (int i = 1; i < MAX_HISTORY_LINES; i++) {
+			strcpy(monitorHistory[i - 1], monitorHistory[i]);
+		}
+		strncpy(monitorHistory[MAX_HISTORY_LINES - 1], message, MAX_LINE_LENGTH - 1);
+		monitorHistory[MAX_HISTORY_LINES - 1][MAX_LINE_LENGTH - 1] = '\0';
+	}
+
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Monitor history updated: %s", message);
+	loggerLogKernel(LOG_INFO, logBuffer);
+
+	return CMD_SUCCESS;
+}
+
+
 CommandStatus_t monitorPrint(const char* message) {
-    if (historyCount < MAX_HISTORY_LINES) {
-        strncpy(monitorHistory[historyCount], message, MAX_LINE_LENGTH - 1);
-        monitorHistory[historyCount][MAX_LINE_LENGTH - 1] = '\0';
-        historyCount++;
-    } else {
-        for (int i = 1; i < MAX_HISTORY_LINES; i++) strcpy(monitorHistory[i - 1], monitorHistory[i]);
-        strncpy(monitorHistory[MAX_HISTORY_LINES - 1], message, MAX_LINE_LENGTH - 1);
-        monitorHistory[MAX_HISTORY_LINES - 1][MAX_LINE_LENGTH - 1] = '\0';
-    }
+	monitorSaveHistory(message);
 
-    snprintf(logBuffer, LOG_BUFFER_SIZE, "Message sent to monitor: %s", message);
-    loggerLogKernel(LOG_INFO, logBuffer);
+	if (OS_MONITOR_ACTIVE) {
+		printf("\r\x1b[2K%s\r\n", message);
+		fflush(stdout);
+	}
 
-    if (OS_MONITOR_ACTIVE) {
-        printf("\r\x1b[2K%s\r\n", message);
-        fflush(stdout);
-    }
-
-    return CMD_SUCCESS;
+	return CMD_SUCCESS;
 }
 
 
