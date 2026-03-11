@@ -345,7 +345,7 @@ CommandStatus_t parseInput(char* input, char* command, char** args, int* argCoun
 	command[19] = '\0';
 
 	token = strtok(NULL, " \t");
-	while (token != NULL && *argCount < MAX_PROCESSES) {
+	while (token != NULL && *argCount < MAX_PROCESSES * 2) {
 		args[*argCount] = token;
 		(*argCount)++;
 		token = strtok(NULL, " \t");
@@ -552,7 +552,7 @@ CommandStatus_t handleRestartCommand(void) {
 ConsoleStatus_t consoleStart(void) {
 	char buffer[CONSOLE_BUFFER_SIZE];
 	char command[CONSOLE_BUFFER_SIZE];
-	char* argument[MAX_PROCESSES];
+	char* argument[MAX_PROCESSES * 2];
 	int argCount = 0;
 	CommandStatus_t output = CMD_SUCCESS;
 	
@@ -575,7 +575,11 @@ ConsoleStatus_t consoleStart(void) {
 		if (parseStatus == CMD_EMPTY) continue;
 
 		if (strcmp(command, "run") == 0) {
-			if (argCount == 0) {
+			if (argCount > MAX_PROCESSES) {
+				printf("\x1b[1;31mError: Too many arguments for 'run' command\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'debug' command");
+				continue;
+			} else if (argCount == 0) {
 				loggerLogKernel(LOG_WARNING, "Missing arguments for 'run' command");
 				printf("\x1b[1;31mError: Missing program file(s) to execute\x1b[0m\n");
 				continue;
