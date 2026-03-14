@@ -6,7 +6,7 @@
  * REPL (Read-Eval-Print Loop), parses commands (RUN, DEBUG, EXIT),
  * and manages the system execution modes.
  *
- * @version 1.4
+ * @version 1.5
  */
 
 #ifndef CONSOLE_H
@@ -58,6 +58,12 @@ CommandStatus_t disableRawMode(void);
  * @return CommandStatus_t CMD_SUCCESS if parsed, CMD_EMPTY if input was blank.
  */
 CommandStatus_t parseInput(char* input, char* command, char** args, int* argCount);
+
+/**
+ * @brief Saves message to the monitor history.
+ * @param message The string to save.
+ */
+CommandStatus_t monitorSaveHistory(const char* message);
 
 /**
  * @brief Prints a message to the monitor and saves it to the history.

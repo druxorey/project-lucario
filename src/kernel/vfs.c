@@ -28,17 +28,19 @@ VFSStatus_t vfsGetCatalogEntry(int index, FileMeta_t* outMeta) {
 }
 
 
-bool vfsFileExists(const char* fileName) {
+bool vfsFileExists(const char* identifier) {
 	for (int i = 0; i < catalogCount; i++) {
-		if (strcmp(diskCatalog[i].fileName, fileName) == 0) return true;
+		if (strcmp(diskCatalog[i].filePath, identifier) == 0 || strcmp(diskCatalog[i].programName, identifier) == 0) {
+			return true;
+		}
 	}
 	return false;
 }
 
 
-VFSStatus_t vfsGetMetadata(const char* fileName, FileMeta_t* outMeta) {
+VFSStatus_t vfsGetMetadata(const char* identifier, FileMeta_t* outMeta) {
 	for (int i = 0; i < catalogCount; i++) {
-		if (strcmp(diskCatalog[i].fileName, fileName) == 0) {
+		if (strcmp(diskCatalog[i].filePath, identifier) == 0 || strcmp(diskCatalog[i].programName, identifier) == 0) {
 			if (outMeta != NULL) *outMeta = diskCatalog[i];
 			return VFS_SUCCESS;
 		}
@@ -47,14 +49,17 @@ VFSStatus_t vfsGetMetadata(const char* fileName, FileMeta_t* outMeta) {
 }
 
 
-VFSStatus_t vfsRegisterFile(const char* fileName, uint8_t track, uint8_t cyl, uint8_t sec, int words, int startPC) {
+VFSStatus_t vfsRegisterFile(const char* filePath, const char* programName, uint8_t track, uint8_t cyl, uint8_t sec, int words, int startPC) {
 	if (catalogCount >= MAX_PROCESSES) {
 		loggerLogKernel(LOG_WARNING, "VFS Error: Disk catalog is full.");
 		return VFS_ERR_DISK_FULL;
 	}
 	
-	strncpy(diskCatalog[catalogCount].fileName, fileName, 255);
-	diskCatalog[catalogCount].fileName[255] = '\0';
+	strncpy(diskCatalog[catalogCount].filePath, filePath, 255);
+	diskCatalog[catalogCount].filePath[255] = '\0';
+	strncpy(diskCatalog[catalogCount].programName, programName, 255);
+	diskCatalog[catalogCount].programName[255] = '\0';
+	diskCatalog[catalogCount].filePath[255] = '\0';
 	diskCatalog[catalogCount].startTrack = track;
 	diskCatalog[catalogCount].startCylinder = cyl;
 	diskCatalog[catalogCount].startSector = sec;
@@ -64,7 +69,7 @@ VFSStatus_t vfsRegisterFile(const char* fileName, uint8_t track, uint8_t cyl, ui
 	catalogCount++;
 	
 	char logBuffer[LOG_BUFFER_SIZE];
-	snprintf(logBuffer, LOG_BUFFER_SIZE, "VFS: File '%s' registered in catalog at T:%d C:%d S:%d", fileName, track, cyl, sec);
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "VFS: File '%s' registered in catalog at T:%d C:%d S:%d", filePath, track, cyl, sec);
 	loggerLogKernel(LOG_INFO, logBuffer);
 	
 	return VFS_SUCCESS;
@@ -92,10 +97,10 @@ VFSStatus_t vfsLoadToDisk(const char* filePath) {
 	}
 
 	int startPC, wordCount;
-	char internalProgName[256];
+	char programName[256];
 	fscanf(file, "%*s %d", &startPC);
 	fscanf(file, "%*s %d", &wordCount);
-	fscanf(file, "%*s %s", internalProgName);
+	fscanf(file, "%*s %s", programName);
 
 	int totalDiskSectors = DISK_TRACKS * DISK_CYLINDERS * DISK_SECTORS;
 	int usedSectors = (freeTrack * DISK_CYLINDERS * DISK_SECTORS) + (freeCylinder * DISK_SECTORS) + freeSector;
@@ -131,7 +136,7 @@ VFSStatus_t vfsLoadToDisk(const char* filePath) {
 	fclose(file);
 	loggerLogKernel(LOG_INFO, "VFS: Program fully written to Virtual Disk.");
 
-	return vfsRegisterFile(filePath, startT, startC, startS, wordCount, startPC);
+	return vfsRegisterFile(filePath, programName, startT, startC, startS, wordCount, startPC);
 }
 
 

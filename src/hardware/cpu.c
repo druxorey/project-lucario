@@ -149,11 +149,11 @@ bool handleInterrupt(InterruptCode_t code) {
 		case IC_OVERFLOW:
 			CPU.AC = intToWord((interruptValue % (MAX_MAGNITUDE + 1)), &CPU.PSW);
 			snprintf(logBuffer, LOG_BUFFER_SIZE, "Arithmetic Overflow: Previous %ld -> Adjusted to %d", interruptValue, wordToInt(CPU.AC));
-			loggerLogHardware(LOG_INFO, logBuffer);
+			loggerLogHardware(LOG_WARNING, logBuffer);
 			return true;
 		case IC_UNDERFLOW:
 			CPU.AC = intToWord(0, &CPU.PSW);
-			loggerLogHardware(LOG_INFO, "Arithmetic Underflow: Value clamped to 0");
+			loggerLogHardware(LOG_WARNING, "Arithmetic Underflow: Value clamped to 0");
 			return true;
 		case IC_TIMER:
 			loggerLogHardware(LOG_INFO, "Timer Interrupt: External clock tick received");
@@ -206,7 +206,7 @@ word intToWord(int intValue, PSW_t* psw) {
 
 	wordValue = magnitude;
 	if (isNegative && magnitude != 0) { // Avoid "-0" (10000000) if we prefer to normalize
-		wordValue |= SIGN_BIT;
+		wordValue += SIGN_BIT;
 	}
 
 	return wordValue;
@@ -247,15 +247,20 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 	OpCode_t op = instruction.opCode;
 	word operandValue;
 	if (fetchOperand(instruction, &operandValue)) return INSTR_EXEC_FAIL;
+	
 	int accumulatorValue = wordToInt(CPU.AC);
 	int operandIntValue = wordToInt(operandValue);
+	
 	int64_t result = 0;
+	
 	switch (op) {
 		case OP_SUM:
-			CPU.AC = intToWord(accumulatorValue + operandIntValue, &CPU.PSW);
+			result = (int64_t)accumulatorValue + operandIntValue;
+			CPU.AC = intToWord(result, &CPU.PSW);
 			break;
 		case OP_RES:
-			CPU.AC = intToWord(accumulatorValue - operandIntValue, &CPU.PSW);
+			result = (int64_t)accumulatorValue - operandIntValue;
+			CPU.AC = intToWord(result, &CPU.PSW);
 			break;
 		case OP_MULT:
 			result = (int64_t)accumulatorValue * operandIntValue;
@@ -272,12 +277,14 @@ InstructionStatus_t executeArithmetic(Instruction_t instruction) {
 				CPU.PSW.conditionCode = CC_OVERFLOW;
 				return INSTR_EXEC_FAIL;
 			}
-			CPU.AC = intToWord(accumulatorValue / operandIntValue, &CPU.PSW);
+			result = (int64_t)accumulatorValue / operandIntValue;
+			CPU.AC = intToWord(result, &CPU.PSW);
 			break;
 		default:
 			raiseInterrupt(IC_INVALID_INSTR);
 			return INSTR_EXEC_FAIL;
 	}
+	
 	if (CPU.PSW.conditionCode == CC_OVERFLOW) {
 		raiseInterruptRelated(IC_OVERFLOW, result);
 	}
@@ -659,7 +666,7 @@ CPUStatus_t execute(Instruction_t instruction) {
 		case OP_TTI:
 			if (fetchOperand(instruction, &interval) == INSTR_EXEC_SUCCESS) {
 				CPU.timerLimit = (uint64_t)wordToInt(interval);
-				snprintf(logBuffer, LOG_BUFFER_SIZE, "Timer interval set to %lu cycles\n", CPU.timerLimit);
+				snprintf(logBuffer, LOG_BUFFER_SIZE, "Timer interval set to %lu cycles", CPU.timerLimit);
 				loggerLogHardware(LOG_INFO, logBuffer);
 				status = INSTR_EXEC_SUCCESS;
 			} else {

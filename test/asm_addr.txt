@@ -1,24 +1,24 @@
 _start 1
 .NumeroPalabras 25
-.NombreProg TestAsmAddr
-04100777   // 01. LOAD 777    Immediate
-05000020   // 02. STR 20      Direct. RAM[20] = 777
-04100010   // 03. LOAD 10     Immediate. AC = 10
-04200010   // 04. LOAD 10+AC  Indexed. Read RAM[10+10] = RAM[20]. AC must be 777
-05000021   // 05. STR 21      Direct. Store what we read (777)
-04100001   // 06. LOAD 1
-13000000   // 07. SVC
-00000000   // ...             Padding up to 20
-00000000
-00000000
-00000000
-00000000
-00000000
-00000000
-00000000
-00000000
-00000000
-00000000
-00000000
-00000000   // 20.             The 777 will be here
-00000000   // 21.             The result will be stored here
+.NombreProg TestAddr
+04100777   // 01. LOAD 777     Immediate  - AC = 777
+05000020   // 02. STR 20       Direct     - RAM[20] = AC
+04100010   // 03. LOAD 10      Immediate  - AC = 10
+04200010   // 04. LOAD 10      Indexed    - AC = RAM[10 + AC]
+05000021   // 05. STR 21       Direct     - RAM[21] = AC
+04100001   // 06. LOAD 1       Immediate  - AC = 1
+13000000   // 07. SVC          Implicit   - System call
+00000000   // 08. NOP          Implicit   - Padding
+00000000   // 09. NOP          Implicit   - Padding
+00000000   // 10. NOP          Implicit   - Padding
+00000000   // 11. NOP          Implicit   - Padding
+00000000   // 12. NOP          Implicit   - Padding
+00000000   // 13. NOP          Implicit   - Padding
+00000000   // 14. NOP          Implicit   - Padding
+00000000   // 15. NOP          Implicit   - Padding
+00000000   // 16. NOP          Implicit   - Padding
+00000000   // 17. NOP          Implicit   - Padding
+00000000   // 18. NOP          Implicit   - Padding
+00000000   // 19. NOP          Implicit   - Padding
+00000000   // 20. NOP          Implicit   - Target memory for 777
+00000000   // 21. NOP          Implicit   - Target memory for result

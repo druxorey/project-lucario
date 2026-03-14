@@ -296,7 +296,7 @@ static CommandStatus_t printDiskStatus(void) {
 			FileMeta_t meta;
 			vfsGetCatalogEntry(i, &meta);
 			char sym = symbols[i % numSymbols];
-			printf("  [\x1b[32m%c\x1b[0m] -> %-20s (Size: %d words)\n", sym, meta.fileName, meta.wordCount);
+			printf("  [\x1b[32m%c\x1b[0m] -> %-20s (Size: %d words)\n", sym, meta.programName, meta.wordCount);
 		}
 	} else {
 		printf("\n  No programs currently loaded on virtual disk.\n");
@@ -314,9 +314,9 @@ CommandStatus_t enableRawMode(void) {
 	struct termios raw = origTermios;
 	raw.c_lflag &= ~(ECHO | ICANON);
 	
-	// NUEVO: Tiempo de espera (Timeout) para getchar()
-	raw.c_cc[VMIN] = 0;   // 0 caracteres mínimos para retornar
-	raw.c_cc[VTIME] = 1;  // 1 decima de segundo de timeout (100ms)
+	// Timeout for getchar()
+	raw.c_cc[VMIN] = 0;   // 0 minimum characters to return
+	raw.c_cc[VTIME] = 1;  // 1 tenth of a second timeout (100ms)
 	
 	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) return CMD_RUNTIME_ERROR;
 	return CMD_SUCCESS;
@@ -345,7 +345,7 @@ CommandStatus_t parseInput(char* input, char* command, char** args, int* argCoun
 	command[19] = '\0';
 
 	token = strtok(NULL, " \t");
-	while (token != NULL && *argCount < MAX_PROCESSES) {
+	while (token != NULL && *argCount < MAX_PROCESSES * 2) {
 		args[*argCount] = token;
 		(*argCount)++;
 		token = strtok(NULL, " \t");
@@ -362,26 +362,35 @@ CommandStatus_t parseInput(char* input, char* command, char** args, int* argCoun
 }
 
 
+CommandStatus_t monitorSaveHistory(const char* message) {
+	if (historyCount < MAX_HISTORY_LINES) {
+		strncpy(monitorHistory[historyCount], message, MAX_LINE_LENGTH - 1);
+		monitorHistory[historyCount][MAX_LINE_LENGTH - 1] = '\0';
+		historyCount++;
+	} else {
+		for (int i = 1; i < MAX_HISTORY_LINES; i++) {
+			strcpy(monitorHistory[i - 1], monitorHistory[i]);
+		}
+		strncpy(monitorHistory[MAX_HISTORY_LINES - 1], message, MAX_LINE_LENGTH - 1);
+		monitorHistory[MAX_HISTORY_LINES - 1][MAX_LINE_LENGTH - 1] = '\0';
+	}
+
+	snprintf(logBuffer, LOG_BUFFER_SIZE, "Monitor history updated: %s", message);
+	loggerLogKernel(LOG_INFO, logBuffer);
+
+	return CMD_SUCCESS;
+}
+
+
 CommandStatus_t monitorPrint(const char* message) {
-    if (historyCount < MAX_HISTORY_LINES) {
-        strncpy(monitorHistory[historyCount], message, MAX_LINE_LENGTH - 1);
-        monitorHistory[historyCount][MAX_LINE_LENGTH - 1] = '\0';
-        historyCount++;
-    } else {
-        for (int i = 1; i < MAX_HISTORY_LINES; i++) strcpy(monitorHistory[i - 1], monitorHistory[i]);
-        strncpy(monitorHistory[MAX_HISTORY_LINES - 1], message, MAX_LINE_LENGTH - 1);
-        monitorHistory[MAX_HISTORY_LINES - 1][MAX_LINE_LENGTH - 1] = '\0';
-    }
+	monitorSaveHistory(message);
 
-    snprintf(logBuffer, LOG_BUFFER_SIZE, "Message sent to monitor: %s", message);
-    loggerLogKernel(LOG_INFO, logBuffer);
+	if (OS_MONITOR_ACTIVE) {
+		printf("\r\x1b[2K%s\r\n", message);
+		fflush(stdout);
+	}
 
-    if (OS_MONITOR_ACTIVE) {
-        printf("\r\x1b[2K%s\r\n", message);
-        fflush(stdout);
-    }
-
-    return CMD_SUCCESS;
+	return CMD_SUCCESS;
 }
 
 
@@ -542,6 +551,8 @@ CommandStatus_t handleDebugCommand(char* argument) {
 CommandStatus_t handleRestartCommand(void) {
 	cpuReset();
 	memoryReset();
+	osYield = false;
+	initOS();
 	printReplInit();
 	loggerLogKernel(LOG_INFO, "System restarted via CLI (restart command)");
 	return CMD_SUCCESS;
@@ -550,7 +561,7 @@ CommandStatus_t handleRestartCommand(void) {
 ConsoleStatus_t consoleStart(void) {
 	char buffer[CONSOLE_BUFFER_SIZE];
 	char command[CONSOLE_BUFFER_SIZE];
-	char* argument[MAX_PROCESSES];
+	char* argument[MAX_PROCESSES * 2];
 	int argCount = 0;
 	CommandStatus_t output = CMD_SUCCESS;
 	
@@ -573,7 +584,11 @@ ConsoleStatus_t consoleStart(void) {
 		if (parseStatus == CMD_EMPTY) continue;
 
 		if (strcmp(command, "run") == 0) {
-			if (argCount == 0) {
+			if (argCount > MAX_PROCESSES) {
+				printf("\x1b[1;31mError: Too many arguments for 'run' command\x1b[0m\n");
+				loggerLogKernel(LOG_WARNING, "Too many arguments for 'debug' command");
+				continue;
+			} else if (argCount == 0) {
 				loggerLogKernel(LOG_WARNING, "Missing arguments for 'run' command");
 				printf("\x1b[1;31mError: Missing program file(s) to execute\x1b[0m\n");
 				continue;

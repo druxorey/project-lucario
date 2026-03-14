@@ -1,39 +1,39 @@
 _start 1
 .NumeroPalabras 36
-.NombreProg TestAsmRegisters
-04100042   // 00. LOAD 42
-07000000   // 01. STRRX       RX=42
-04100042   // 02. LOAD 42     Expected
-25000000   // 03. PSH
-24000000   // 04. STRSP       Push expected RX
-06000000   // 05. LOADRX      AC=42
-09100010   // 06. JMPE 10     If AC == M[SP], jump to RX success
-26000000   // 07. POP         Clear expected on RX failure
-04100000   // 08. LOAD 0      Safety termination
-13000000   // 09. SVC
-26000000   // 10. POP         RX success: clear expected
-04100100   // 11. LOAD 100
-20000000   // 12. STRRB       RB=100
-04100100   // 13. LOAD 100    Expected
-25000000   // 14. PSH
-24000000   // 15. STRSP       Push expected RB
-19000000   // 16. LOADRB      AC=100
-09100021   // 17. JMPE 21     If AC == M[SP], jump to RB success
-26000000   // 18. POP         Clear expected on RB failure
-04100000   // 19. LOAD 0      Safety termination
-13000000   // 20. SVC
-26000000   // 21. POP         RB success: clear expected
-04100200   // 22. LOAD 200
-22000000   // 23. STRRL       RL=200
-04100200   // 24. LOAD 200    Expected
-25000000   // 25. PSH
-24000000   // 26. STRSP       Push expected RL
-21000000   // 27. LOADRL      AC=200
-09100032   // 28. JMPE 32     If AC == M[SP], jump to RL success
-26000000   // 29. POP         Clear expected on RL failure
-04100000   // 30. LOAD 0      Safety termination
-13000000   // 31. SVC
-26000000   // 32. POP         RL success: clear expected
-04100001   // 33. LOAD 1
-13000000   // 34. SVC
-00000000   // 35.             Padding
+.NombreProg TestRegisters
+04100042   // 00. LOAD 42      Immediate  - AC = 42
+07000000   // 01. STRRX        Implicit   - RX = AC
+04100042   // 02. LOAD 42      Immediate  - AC = 42
+25000000   // 03. PSH          Implicit   - Push AC to stack
+24000000   // 04. STRSP        Implicit   - RAM[SP] = AC
+06000000   // 05. LOADRX       Implicit   - AC = RX
+09100010   // 06. JMPE 10      Immediate  - Jump to 10 if AC == RAM[SP]
+26000000   // 07. POP          Implicit   - Pop stack to AC
+04100000   // 08. LOAD 0       Immediate  - AC = 0
+13000000   // 09. SVC          Implicit   - System call
+26000000   // 10. POP          Implicit   - Pop stack to AC
+04100100   // 11. LOAD 100     Immediate  - AC = 100
+20000000   // 12. STRRB        Implicit   - RB = AC
+04100100   // 13. LOAD 100     Immediate  - AC = 100
+25000000   // 14. PSH          Implicit   - Push AC to stack
+24000000   // 15. STRSP        Implicit   - RAM[SP] = AC
+19000000   // 16. LOADRB       Implicit   - AC = RB
+09100021   // 17. JMPE 21      Immediate  - Jump to 21 if AC == RAM[SP]
+26000000   // 18. POP          Implicit   - Pop stack to AC
+04100000   // 19. LOAD 0       Immediate  - AC = 0
+13000000   // 20. SVC          Implicit   - System call
+26000000   // 21. POP          Implicit   - Pop stack to AC
+04100200   // 22. LOAD 200     Immediate  - AC = 200
+22000000   // 23. STRRL        Implicit   - RL = AC
+04100200   // 24. LOAD 200     Immediate  - AC = 200
+25000000   // 25. PSH          Implicit   - Push AC to stack
+24000000   // 26. STRSP        Implicit   - RAM[SP] = AC
+21000000   // 27. LOADRL       Implicit   - AC = RL
+09100032   // 28. JMPE 32      Immediate  - Jump to 32 if AC == RAM[SP]
+26000000   // 29. POP          Implicit   - Pop stack to AC
+04100000   // 30. LOAD 0       Immediate  - AC = 0
+13000000   // 31. SVC          Implicit   - System call
+26000000   // 32. POP          Implicit   - Pop stack to AC
+04100001   // 33. LOAD 1       Immediate  - AC = 1
+13000000   // 34. SVC          Implicit   - System call
+00000000   // 35. NOP          Implicit   - Padding
